@@ -122,10 +122,10 @@ ax.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
 
 plt.show()
 
-#print(sgd_clf.predict([X_train.loc['ExpendableToMe']]))
-
 def pred_lean(names):
+    if type(names) == str: names = [names]
     dict = [get_subs(name) for name in names]
     inst = full_pipeline.transform(dict).todense()
     return model.predict_classes(inst)
+
 #print(pred_lean(['tigeer']))

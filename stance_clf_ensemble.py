@@ -14,7 +14,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict, GridSearchCV
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
-from sklearn.base import BaseEstimator, TransformerMixin, clone
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 
 class DictFilterer(BaseEstimator, TransformerMixin):
@@ -133,6 +133,8 @@ for sub, weight in sorted(zip(X_train.columns, log_ws), key=lambda x: x[1]):
     print(sub, weight)
 
 def pred_lean(names):
+    if type(names) == str: names = [names]
+
     dict = [get_subs(name) for name in names]
     series = full_pipeline.transform(dict)
     series = pd.DataFrame.sparse.from_spmatrix(series, columns=best_feat, index=names)
