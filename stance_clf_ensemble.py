@@ -8,22 +8,16 @@ def warn(*args, **kwargs):
 import warnings
 warnings.warn = warn
 from sklearn.feature_extraction import DictVectorizer
+from custom_transformers import DictFilterer, exclude_u_sub
 from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict, GridSearchCV
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
-from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 
-class DictFilterer(BaseEstimator, TransformerMixin):
-    def __init__(self, predicate):
-        self.predicate = predicate
-    def fit(self, X, y=None):
-        return self
-    def transform(self, X, y=None):
-        return [{k:v for k, v in x.items() if self.predicate(k)} for x in X]
+import joblib
 
 """
 The moral of the story of this project was that empty features columns (when in a sparse matrix)
@@ -66,7 +60,7 @@ labels = [data['stance'] for _, data in mldata.items()]
 stances = list(set(labels))
 
 
-full_pipeline = Pipeline([('filterer', DictFilterer(lambda k: k[:2] != 'u_')), #k in rel_subs
+full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)), #k in rel_subs
                             ('vectorizer', DictVectorizer(sparse=True)),
                             ('selectKBest', SelectKBest(chi2, k=1000)),
                             ('scaler', StandardScaler(with_mean=False))])
@@ -76,6 +70,8 @@ X = full_pipeline.fit_transform(features, labels)
 all = full_pipeline.named_steps.vectorizer.get_feature_names()
 sel = full_pipeline.named_steps.selectKBest.get_support()
 best_feat = np.array(all)[sel]
+joblib.dump(best_feat, 'models/best_feat_ensemble.pkl')
+
 print(X.shape)
 # print(best_feat)
 
@@ -91,46 +87,52 @@ for train_index, test_index in ssplit.split(X, y):
 non_empty = (X_train != 0).any(axis=0) & (X_test != 0).any(axis=0)
 print(non_empty.value_counts())
 non_empty = non_empty.index[non_empty]
+joblib.dump(non_empty, 'models/non_empty_ensemble.pkl')
 
 X_train = X_train[non_empty]
 X_test = X_test[non_empty]
 
-log_clf = LogisticRegression(C=0.2, penalty='l1')
+log_clf = LogisticRegression(C=0.2, penalty='l1', solver='liblinear')
 forest_clf = RandomForestClassifier(min_samples_leaf=5, random_state=42)
 voting_clf = VotingClassifier(estimators=[('forest', forest_clf), ('logit', log_clf)],
                                 voting='soft')
 
-y_pred = cross_val_predict(voting_clf, X_train, y_train, cv=5)
+if __name__ == '__main__':
+    y_pred = cross_val_predict(voting_clf, X_train, y_train, cv=5)
 
-conf_mx = confusion_matrix(y_train, y_pred, labels=stances)
+    conf_mx = confusion_matrix(y_train, y_pred, labels=stances)
 
-print(y_train.value_counts())
-print(stances)
-print(conf_mx)
-print('Precision: ', precision_score(y_train, y_pred, average='weighted'))
-print('Recall: ', recall_score(y_train, y_pred, average='weighted'))
+    print(y_train.value_counts())
+    print(stances)
+    print(conf_mx)
+    print('Precision: ', precision_score(y_train, y_pred, average='weighted'))
+    print('Recall: ', recall_score(y_train, y_pred, average='weighted'))
 
-fig, ax = plt.subplots()
-cax = ax.matshow(conf_mx, cmap=plt.cm.gray)
-fig.colorbar(cax)
+    fig, ax = plt.subplots()
+    cax = ax.matshow(conf_mx, cmap=plt.cm.gray)
+    fig.colorbar(cax)
 
-ax.set_xticks(list(range(len(stances))))
-ax.set_yticks(list(range(len(stances))))
-ax.set_xticklabels(stances, rotation=45)
-ax.set_yticklabels(stances)
+    ax.set_xticks(list(range(len(stances))))
+    ax.set_yticks(list(range(len(stances))))
+    ax.set_xticklabels(stances, rotation=45)
+    ax.set_yticklabels(stances)
 
 
-xleft, xright = ax.get_xlim()
-ybottom, ytop = ax.get_ylim()
-ax.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
+    xleft, xright = ax.get_xlim()
+    ybottom, ytop = ax.get_ylim()
+    ax.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
 
-plt.show()
+    plt.show()
 
 voting_clf.fit(X_train, y_train)
 
-log_ws = list(voting_clf.named_estimators_.logit.coef_[0])
-for sub, weight in sorted(zip(X_train.columns, log_ws), key=lambda x: x[1]):
-    print(sub, weight)
+if __name__ == '__main__':
+    log_ws = list(voting_clf.named_estimators_.logit.coef_[0])
+    for sub, weight in sorted(zip(X_train.columns, log_ws), key=lambda x: x[1]):
+        print(sub, weight)
+
+    joblib.dump(voting_clf, 'models/clf_ensemble.pkl')
+    joblib.dump(full_pipeline, 'models/pipeline_ensemble.pkl')
 
 def pred_lean(names):
     if type(names) == str: names = [names]
