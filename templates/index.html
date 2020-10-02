@@ -3,16 +3,32 @@
 <title>Reddit stance classifier</title>
   <head>
     <link href="../static/main.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Open+Sans&display=swap" rel="stylesheet">
   </head>
   <body>
+    <nav>
+      <div class="logo"></div>
+      <ul class="menu">
+        <div class="menu__item toggle"><span></span></div>
+        <li class="menu__item"><a href="https://github.com/0xTiger/reddit-stance-classifier" class="link link--dark"><i class="fa fa-github"></i> Github</a></li>
+      </ul>
+    </nav>
     <div class="container">
-      <h1> Predict users' political leaning! </h1>
-      <form action="success" method="post">
-        <input title="Username" placeholder="tigeer" name="username" required>
+      <div class="proper_title">
+        <h1> Political leaning <br> prediction</h1>
+      </div>
+      <form action="pred" method="post" id="find_user">
+        <div class="input-group input-group-lg input-group--username">
+          <input type="text" name="username" placeholder="username" aria-describedby="u-addon" autocapitalize="off" autocorrect="off" autocomplete="off" class="form-control username-input">
+          <span class="input-group-btn"><button type="submit" class="btn btn-secondary" form="find_user" value="Submit">Predict</button></span>
+        </div>
       </form>
+      {% block content %}
       <div>
         <p>{{text}}</p>
       </div>
+      {% endblock %}
     </div>
   </body>
 </html>
