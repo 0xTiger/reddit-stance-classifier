@@ -15,8 +15,9 @@ def pred_lean(name):
     series = full_pipeline.transform([dict])
     series = pd.DataFrame.sparse.from_spmatrix(series, columns=best_feat, index=[name])
     series = series[non_empty]
-    return voting_clf.predict(series)[0]
 
+    return voting_clf.predict(series)[0], max(voting_clf.predict_proba(series)[0])
+    
 # full_pipeline_nn = joblib.load('models/pipeline_nn.pkl')
 # model = joblib.load('models/clf_nn.pkl')
 #

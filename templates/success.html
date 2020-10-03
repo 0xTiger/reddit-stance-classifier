@@ -1,7 +1,16 @@
 {% extends "index.html" %}
 {% block content %}
 <div>
-  <p>User: {{user}} </p>
-  <p>Stance: {{stance}} </p>
+  <table cellspacing="0" class="center">
+    <tr>
+      <td><p>User:</p></td><td><p>{{user}}</p></td>
+    </tr>
+    <tr>
+      <td><p>Stance: </p></td><td><p>{{stance_name}} <img src="{{ url_for('static', filename='../static/' + img) }}"></p></td>
+    </tr>
+    <tr>
+      <td><p>Confidence:</p></td><td><p>{{confidence}}</p></td>
+    </tr>
+  </table>
 </div>
 {% endblock %}
