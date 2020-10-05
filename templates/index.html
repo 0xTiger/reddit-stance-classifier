@@ -3,34 +3,21 @@
 <title>Reddit stance classifier</title>
   <head>
     <link href="../static/main.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!--link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"-->
+    <script src="https://kit.fontawesome.com/aec1d7a3b7.js" crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Open+Sans&display=swap" rel="stylesheet">
     <meta content="width=device-width, initial-scale=1" name="viewport">
   </head>
   <body>
     <nav>
-      <div class="logo"></div>
+      <div class="logo"><a href="/"><img src="../static/centrist.png"></a></div>
       <ul class="menu">
         <div class="menu__item toggle"><span></span></div>
+        <li class="menu__item"><a href="/about" class="link link--dark"><i class="fas fa-scroll"></i> About</a></li>
         <li class="menu__item"><a href="https://github.com/0xTiger/reddit-stance-classifier" class="link link--dark"><i class="fa fa-github"></i> Github</a></li>
       </ul>
     </nav>
-    <div class="proper_title">
-      <h1> Political leaning <br> prediction</h1>
-    </div>
-    <div class="container">
-
-      <form action="pred" method="post" id="find_user">
-        <div class="input-group">
-          <input type="text" name="username" placeholder="username" autocapitalize="off" autocorrect="off" autocomplete="off" class="form-control username-input">
-          <span class="input-group-btn"><button type="submit" class="btn" form="find_user" value="Submit">Predict</button></span>
-        </div>
-      </form>
-      {% block content %}
-      <div>
-        <p>{{text}}</p>
-      </div>
-      {% endblock %}
-    </div>
+    {% block content %}
+    {% endblock %}
   </body>
 </html>

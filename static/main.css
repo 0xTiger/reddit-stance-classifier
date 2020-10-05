@@ -18,9 +18,9 @@ body {
   text-align: center;
   font-family: "Bungee";
   line-height: 200%;
-  font-size: 2vw;
+  font-size: 3vw;
   background: url("4col.png");
-  background-size: 50vw;
+  background-size: 70vw;
   background-position: center;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -151,7 +151,16 @@ nav {
   text-align: right;
   overflow: hidden;
   list-style: none;
-  font-size: 3vw;
+  font-size: 2vw;
+}
+
+.menu__item {
+  padding: 0 0.8rem;
+  display: inline-block;
+}
+
+.menu__item.toggle {
+  display: none;
 }
 
 .toggle {
@@ -162,11 +171,10 @@ nav {
 @media only screen and (max-width: 600px) {
   .proper_title {
     font-size: 5vw;
-    background-size: 70vw;
 
   }
   .menu {
-    font-size: 5vw;
+    font-size: 4vw;
   }
 }
 

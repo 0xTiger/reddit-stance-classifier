@@ -25,7 +25,7 @@ class User(db.Model):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("home.html")
 
 @app.route("/pred", methods=['POST'])
 def success():
@@ -54,7 +54,11 @@ def success():
     return render_template("success.html", stance_name=stance_name,
                                             user=username,
                                             img=stance_img,
-                                            confidence=f'{confidence*100:.2f}%' + ' (LOW)' if confidence < 0.7 else f'{confidence*100:.0f}%')
+                                            confidence=f'{confidence*100:.0f}%' + ' (LOW)' if confidence < 0.7 else f'{confidence*100:.0f}%')
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
 
 if __name__ == '__main__':
     app.debug = True
