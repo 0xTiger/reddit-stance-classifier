@@ -20,17 +20,7 @@ from tensorflow import keras
 
 import joblib
 
-"""
-The moral of the story of this project was that empty features columns (when in a sparse matrix)
-break cross_val_predict and possibly other sklearn objects, throwing the error:
-ValueError: Input contains NaN, infinity or a value too large for dtype('float64').
 
-To solve this we construct a boolean ?Pandas? series:
-(X_train != 0).any(axis=0) & (X_test != 0).any(axis=0)
-that returns False if column is empty in either the train or test set.
-We then select only the columns with value True
-
-"""
 """
 TODO
 find best model:

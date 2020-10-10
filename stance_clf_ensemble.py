@@ -19,17 +19,7 @@ from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 
 import joblib
 
-"""
-The moral of the story of this project was that empty features columns (when in a sparse matrix)
-break cross_val_predict and possibly other sklearn objects, throwing the error:
-ValueError: Input contains NaN, infinity or a value too large for dtype('float64').
 
-To solve this we construct a boolean ?Pandas? series:
-(X_train != 0).any(axis=0) & (X_test != 0).any(axis=0)
-that returns False if column is empty in either the train or test set.
-We then select only the columns with value True
-
-"""
 """
 TODO
 find best model:
@@ -83,15 +73,6 @@ for train_index, test_index in ssplit.split(X, y):
     X_train, y_train = X.iloc[train_index], y[train_index]
     X_test, y_test = X.iloc[test_index], y[test_index]
 
-
-non_empty = (X_train != 0).any(axis=0) & (X_test != 0).any(axis=0)
-print(non_empty.value_counts())
-non_empty = non_empty.index[non_empty]
-joblib.dump(non_empty, 'models/non_empty_ensemble.pkl')
-
-X_train = X_train[non_empty]
-X_test = X_test[non_empty]
-
 log_clf = LogisticRegression(C=0.2, penalty='l1', solver='liblinear')
 forest_clf = RandomForestClassifier(min_samples_leaf=5, random_state=42)
 voting_clf = VotingClassifier(estimators=[('forest', forest_clf), ('logit', log_clf)],
@@ -140,6 +121,5 @@ def pred_lean(names):
     dict = [get_subs(name) for name in names]
     series = full_pipeline.transform(dict)
     series = pd.DataFrame.sparse.from_spmatrix(series, columns=best_feat, index=names)
-    series = series[non_empty]
     return voting_clf.predict(series)
 #print(pred_lean(['tigeer']))
