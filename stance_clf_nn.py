@@ -1,4 +1,4 @@
-import json
+splitterimport json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -61,8 +61,8 @@ print(y)
 print(X.shape)
 
 
-ssplit = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-for train_index, test_index in ssplit.split(X, y):
+splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+for train_index, test_index in splitter.split(X, y):
     X_train, y_train = X[train_index], y[train_index]
     X_test, y_test = X[test_index], y[test_index]
 
