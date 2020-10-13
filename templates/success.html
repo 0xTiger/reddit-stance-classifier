@@ -9,7 +9,7 @@
       <td><p>Stance: </p></td><td><p>{{stance_name}} <img src="{{ url_for('static', filename='../static/' + img) }}"></p></td>
     </tr>
     <tr>
-      <td><p>Confidence:</p></td><td><p>{{confidence}}</p></td>
+      <td><p>Confidence:</p><div class="tooltip"><i class="fas fa-info-circle"></i><span class="tooltiptext">The probability that the prediction is correct for the respective axis. This is not a measure of magnitude of position</span></div></td><td><p>{{h_confidence}} {{h_fullstance}}<br>{{v_confidence}} {{v_fullstance}}</p></td>
     </tr>
   </table>
 </div>
