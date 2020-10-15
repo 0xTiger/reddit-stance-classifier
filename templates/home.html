@@ -5,16 +5,25 @@
   <h1> Political leaning <br> prediction</h1>
 </div>
 <div class="container">
-  <form action="pred" method="post" id="find_user">
+  <script type="text/javascript">// <![CDATA[
+        function loading(){
+            $("#loading").show();
+            $("#content").hide();
+        }
+// ]]></script>
+  <form action="pred" method="post" id="find_user" onsubmit="loading()">
     <div class="input-group">
       <input type="text" name="username" placeholder="username" autocapitalize="off" autocorrect="off" autocomplete="off" class="form-control username-input">
       <span class="input-group-btn"><button type="submit" class="btn" form="find_user" value="Submit">Predict</button></span>
     </div>
   </form>
+  <div id="loading"></div>
+  <div id="content">
   {% block info %}
   <div>
     <p>{{text}}</p>
   </div>
   {% endblock %}
+  </div>
 </div>
 {% endblock %}

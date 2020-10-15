@@ -149,6 +149,29 @@ td {
   color: #D42040;
 }
 
+/* loading */
+
+div#loading {
+  display: block;
+  margin-top: 60px;
+  margin-left: auto;
+  margin-right: auto;
+  border-top: 12px solid blue;
+  border-right: 12px solid yellow;
+  border-bottom: 12px solid green;
+  border-left: 12px solid red;
+  border-radius: 50%;
+  display: none;
+  width: 50px;
+  height: 50px;
+  animation: spin 2s linear infinite;
+  text-align: center;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 /* links */
 .link {
   text-decoration: none;

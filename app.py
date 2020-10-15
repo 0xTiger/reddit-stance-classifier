@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from prediction import pred_lean
 
@@ -8,7 +8,6 @@ app = Flask(__name__)
 app.config.from_object(os.environ['APP_SETTINGS'])
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
-
 
 
 class User(db.Model):
@@ -48,7 +47,7 @@ class User(db.Model):
 def index():
     return render_template("home.html")
 
-@app.route("/pred", methods=['POST'])
+@app.route("/pred", methods=['POST', 'GET'])
 def success():
     if request.method == 'POST':
         username = request.form['username']
@@ -66,13 +65,15 @@ def success():
             db.session.add(current_user)
             db.session.commit()
 
-    return render_template("success.html", stance_name=current_user.stance_name(),
-                                            user=username,
-                                            img=current_user.img(),
-                                            h_fullstance= 'left' if current_user.h_stance == 'L' else 'right',
-                                            v_fullstance= 'lib' if current_user.v_stance == 'L' else 'auth',
-                                            h_confidence=f'{current_user.h_confidence*100:.0f}%',
-                                            v_confidence=f'{current_user.v_confidence*100:.0f}%')
+        return render_template("success.html", stance_name=current_user.stance_name(),
+                                                user=username,
+                                                img=current_user.img(),
+                                                h_fullstance= 'left' if current_user.h_stance == 'L' else 'right',
+                                                v_fullstance= 'lib' if current_user.v_stance == 'L' else 'auth',
+                                                h_confidence=f'{current_user.h_confidence*100:.0f}%',
+                                                v_confidence=f'{current_user.v_confidence*100:.0f}%')
+    elif request.method == 'GET':
+        return redirect(url_for('index'))
 
 @app.route("/about")
 def about():
