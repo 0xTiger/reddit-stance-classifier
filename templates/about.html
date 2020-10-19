@@ -3,15 +3,15 @@
 <ul>
   <li>
     <h2>How it works</h2>
-    <p>This classifier was trained on a large sample of users from the <a href="https://www.reddit.com/r/politicalcompassmemes">r/politicalcompassmemes</a> subreddit. Each user's flair defines their political leaning and is used as target data. The features used as an input to the model for a given user are the number of comments they've made in every subreddit. Since users have never commented in the vast majority of subreddits, a sparse array is used to encode each instance of a user.<br>The model used for classification is a logistic regression model. It is necessary to simplify a user's flair from their political compass quadrant to left/right to obtain accurate predictions.</p>
+    <p>This classifier was trained on a large sample of users from the <a href="https://www.reddit.com/r/politicalcompassmemes">r/politicalcompassmemes</a> subreddit. Each user's flair defines their political leaning and is used as target data. The features used as an input to the model for a given user are the number of comments they've made in every subreddit. Since users have never commented in the vast majority of subreddits, a sparse array is used to encode each instance of a user.<br><br>The model used for classification is a logistic regression model. It is necessary to extract two axes of the political compass (horizontal & vertical) from each user's flair. For example: 'authleft' -> ('L', 'A'), 'lib' -> (None, 'L')</p>
   </li>
   <li>
     <h2>Performance</h2>
-    <p>Currently, the model achieves a precision of 0.8 and recall of 0.8 on a test set taken again from unseen users of <a href="https://www.reddit.com/r/politicalcompassmemes">r/politicalcompassmemes</a>. While these metrics seem quite good, it must be considered that since the model is only trained and tested on users from this small community the predictions made may not generalise well across all of Reddit's userbase. This is especially an issue considering that intuition suggests users of <a href="https://www.reddit.com/r/politicalcompassmemes">r/politicalcompassmemes</a> are likely to comment in more political subreddits than the average reddit user. This will mean users in the test set will have more relevant data allowing better predictions to be made.</p>
+    <p>Currently, the model achieves a precision of 0.8 and recall of 0.8 on a test set taken again from unseen users of <a href="https://www.reddit.com/r/politicalcompassmemes">r/politicalcompassmemes</a>. While these metrics seem quite good, it must be considered that since the model is only trained and tested on users from this small community the predictions made may not generalise well across all of Reddit's userbase. This is especially an issue considering that intuition suggests users of <a href="https://www.reddit.com/r/politicalcompassmemes">r/politicalcompassmemes</a> are likely to comment in more political subreddits than the average reddit user. This will mean users in the test set will have a greater amount of relevant data allowing better predictions to be made.<br><br> Due to the significant class imbalance present in the training data (the number of users that lean 'lib' on the v axis is far greater than those who lean 'auth'). It may be useful to consider alternative metrics such as bACC or PPCR.</p>
   </li>
   <li>
     <h2>Future improvements</h2>
-    <p>I hope to implement the ability to classify a user's position on the libertarian/authoritarian axis. This however depends on whether I can achieve reasonable performance with such a classifier.</p>
+    <p>I hope to implement the use of more features. The use of NLP could be promising to enhance predictions in cases where users have only few comments available. </p>
   </li>
 </ul>
 

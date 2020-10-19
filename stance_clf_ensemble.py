@@ -29,7 +29,6 @@ best sofar: VotingClassifier()--
 
 Try different regularization (possibly less this time with larger dataset)
 using GridSearchCV, also try giving more noteable users a greater sample_weight in .fit() method for the
-make webapp backend to predict leaning given username
 """
 with open('user_profiles.json') as f:
     mldata = json.load(f)
@@ -110,7 +109,7 @@ if __name__ == '__main__':
     print('Recall: ', recall_score(y_train, y_pred, average='weighted'))
 
     print(y_train2.value_counts())
-    print(['A', 'F'])
+    print(v_stances)
     print(conf_mx2)
     print('Precision: ', precision_score(y_train2, y_pred2, average='weighted'))
     print('Recall: ', recall_score(y_train2, y_pred2, average='weighted'))
@@ -143,11 +142,5 @@ if __name__ == '__main__':
     joblib.dump(voting_clf2, 'models/clf_ensemble2.pkl')
     joblib.dump(full_pipeline2, 'models/pipeline_ensemble2.pkl')
 
-def pred_lean(names):
-    if type(names) == str: names = [names]
-
-    dict = [get_subs(name) for name in names]
-    series = full_pipeline.transform(dict)
-    series = pd.DataFrame.sparse.from_spmatrix(series, index=names)
-    return voting_clf.predict(series)
+from prediction import pred_lean
 #print(pred_lean(['tigeer']))
