@@ -11,7 +11,7 @@ full_pipeline2 = joblib.load('models/pipeline_ensemble2.pkl')
 def pred_lean(name):
     dict = get_subs(name)
     if not dict:
-        raise ValueError(f'User \'{name}\' does not exist')
+        raise ValueError(f'User \'{name}\' has no comment history')
 
     series = full_pipeline.transform([dict])
     h_stance = voting_clf.predict(series)[0]

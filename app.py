@@ -2,6 +2,8 @@ import os
 from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from prediction import pred_lean
+from requests.exceptions import HTTPError
+
 
 app = Flask(__name__)
 
@@ -60,6 +62,8 @@ def success():
                 pred_stance = pred_lean(username)
             except ValueError as err:
                 return render_template("failure.html", error=str(err))
+            except HTTPError as err:
+                return render_template("failure.html", error='External API error')
 
             current_user = User(username, *pred_stance)
             db.session.add(current_user)
