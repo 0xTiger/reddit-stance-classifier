@@ -74,8 +74,8 @@ def success():
                                                 img=current_user.img(),
                                                 h_fullstance= 'left' if current_user.h_stance == 'L' else 'right',
                                                 v_fullstance= 'lib' if current_user.v_stance == 'L' else 'auth',
-                                                h_confidence=f'{current_user.h_confidence*100:.0f}%',
-                                                v_confidence=f'{current_user.v_confidence*100:.0f}%')
+                                                h_confidence=f'{current_user.h_confidence:.0%}',
+                                                v_confidence=f'{current_user.v_confidence:.0%}')
     elif request.method == 'GET':
         return redirect(url_for('index'))
 
