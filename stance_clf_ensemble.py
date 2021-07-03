@@ -64,40 +64,38 @@ for user, data in gen:
 h_stances = list(set(labels))
 v_stances = list(set(labels2))
 
-
-full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)), #k in rel_subs
-                            ('vectorizer', DictVectorizer(sparse=True)),
-                            ('selectKBest', SelectKBest(chi2, k=1000)),
-                            ('scaler', StandardScaler(with_mean=False)),
-                            ('framer', ToSparseDF())])
-full_pipeline2 = clone(full_pipeline)
-
-X = full_pipeline.fit_transform(features, labels)
-X2 = full_pipeline2.fit_transform(features2, labels2)
-y = pd.Series(labels)
-y2 = pd.Series(labels2)
-
-print(X.shape)
+features = pd.Series(features)
+labels = pd.Series(labels)
+features2 = pd.Series(features2)
+labels2 = pd.Series(labels2)
 
 splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-for train_index, test_index in splitter.split(X, y):
-    X_train, y_train = X.iloc[train_index], y[train_index]
-    X_test, y_test = X.iloc[test_index], y[test_index]
+for train_index, test_index in splitter.split(features, labels):
+    X_train, y_train = features[train_index], labels[train_index]
+    X_test, y_test = features[test_index], labels[test_index]
 
 splitter2 = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-for train_index, test_index in splitter2.split(X2, y2):
-    X_train2, y_train2 = X2.iloc[train_index], y2[train_index]
-    X_test2, y_test2 = X2.iloc[test_index], y2[test_index]
+for train_index, test_index in splitter2.split(features2, labels2):
+    X_train2, y_train2 = features2[train_index], labels2[train_index]
+    X_test2, y_test2 = features2[test_index], labels2[test_index]
+
 
 log_clf = LogisticRegression(C=0.2, penalty='l1', solver='liblinear')
 forest_clf = RandomForestClassifier(min_samples_leaf=5, random_state=42)
 voting_clf = VotingClassifier(estimators=[('forest', forest_clf), ('logit', log_clf)],
                                 voting='soft')
-voting_clf2 = clone(voting_clf)
+
+full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)), #k in rel_subs
+                            ('vectorizer', DictVectorizer(sparse=True)),
+                            ('selectKBest', SelectKBest(chi2, k=1000)),
+                            ('scaler', StandardScaler(with_mean=False)),
+                            ('framer', ToSparseDF()),
+                            ('clf', voting_clf)])
+full_pipeline2 = clone(full_pipeline)
 
 if __name__ == '__main__':
-    y_pred = cross_val_predict(voting_clf, X_train, y_train, cv=5)
-    y_pred2 = cross_val_predict(voting_clf2, X_train2, y_train2, cv=5)
+    y_pred = cross_val_predict(full_pipeline, X_train, y_train, cv=5)
+    y_pred2 = cross_val_predict(full_pipeline2, X_train2, y_train2, cv=5)
 
     conf_mx = confusion_matrix(y_train, y_pred, labels=h_stances)
     conf_mx2 = confusion_matrix(y_train2, y_pred2, labels=v_stances)
@@ -130,17 +128,15 @@ if __name__ == '__main__':
 
     plt.show()
 
-voting_clf.fit(X_train, y_train)
-voting_clf2.fit(X_train2, y_train2)
+full_pipeline.fit(X_train, y_train)
+full_pipeline2.fit(X_train2, y_train2)
 if __name__ == '__main__':
-    log_ws = list(voting_clf.named_estimators_.logit.coef_[0])
-    for sub, weight in sorted(zip(X_train.columns, log_ws), key=lambda x: x[1]):
-        print(sub, weight)
+    # log_ws = list(voting_clf.named_estimators_.logit.coef_[0])
+    # for sub, weight in sorted(zip(X_train.columns, log_ws), key=lambda x: x[1]):
+    #     print(sub, weight)
 
-    joblib.dump(voting_clf, 'models/clf_ensemble.pkl')
-    joblib.dump(full_pipeline, 'models/pipeline_ensemble.pkl')
-    joblib.dump(voting_clf2, 'models/clf_ensemble2.pkl')
-    joblib.dump(full_pipeline2, 'models/pipeline_ensemble2.pkl')
+    joblib.dump(full_pipeline, 'models/ensemble.pkl')
+    joblib.dump(full_pipeline2, 'models/ensemble2.pkl')
 
 from prediction import pred_lean
 #print(pred_lean(['tigeer']))
