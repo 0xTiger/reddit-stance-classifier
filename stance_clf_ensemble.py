@@ -18,7 +18,12 @@ from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.base import clone
 import joblib
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-p', '--persist', action='store_true', help='Specify whether to make the model persistent in models/*')
+
+args = parser.parse_args()
 
 """
 TODO
@@ -112,31 +117,33 @@ if __name__ == '__main__':
     print('Precision: ', precision_score(y_train2, y_pred2, average='weighted'))
     print('Recall: ', recall_score(y_train2, y_pred2, average='weighted'))
 
-    fig, ax = plt.subplots()
-    cax = ax.matshow(conf_mx, cmap=plt.cm.gray)
-    fig.colorbar(cax)
+    # fig, ax = plt.subplots()
+    # cax = ax.matshow(conf_mx, cmap=plt.cm.gray)
+    # fig.colorbar(cax)
 
-    ax.set_xticks(list(range(len(h_stances))))
-    ax.set_yticks(list(range(len(h_stances))))
-    ax.set_xticklabels(h_stances, rotation=45)
-    ax.set_yticklabels(h_stances)
+    # ax.set_xticks(list(range(len(h_stances))))
+    # ax.set_yticks(list(range(len(h_stances))))
+    # ax.set_xticklabels(h_stances, rotation=45)
+    # ax.set_yticklabels(h_stances)
 
 
-    xleft, xright = ax.get_xlim()
-    ybottom, ytop = ax.get_ylim()
-    ax.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
+    # xleft, xright = ax.get_xlim()
+    # ybottom, ytop = ax.get_ylim()
+    # ax.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
 
-    plt.show()
+    # plt.show()
 
 full_pipeline.fit(X_train, y_train)
 full_pipeline2.fit(X_train2, y_train2)
+
 if __name__ == '__main__':
     # log_ws = list(voting_clf.named_estimators_.logit.coef_[0])
     # for sub, weight in sorted(zip(X_train.columns, log_ws), key=lambda x: x[1]):
     #     print(sub, weight)
 
-    joblib.dump(full_pipeline, 'models/ensemble.pkl')
-    joblib.dump(full_pipeline2, 'models/ensemble2.pkl')
+    if args.persist:
+        joblib.dump(full_pipeline, 'models/ensemble.pkl')
+        joblib.dump(full_pipeline2, 'models/ensemble2.pkl')
 
-from prediction import pred_lean
-#print(pred_lean(['tigeer']))
+    # from prediction import pred_lean
+    # print(pred_lean(['tigeer']))

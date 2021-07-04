@@ -1,15 +1,7 @@
 import json
 import requests
 
-def get_subs(author):
-    url = f'https://api.pushshift.io/reddit/search/comment/?author={author}&score=%3E0&aggs=subreddit&size=0'
-    r = requests.get(url)
-    r.raise_for_status()
-    data = json.loads(r.text)
-    return {i['key']: i['doc_count'] for i in data['aggs']['subreddit']}
-
-
-def get_subs_redapi(username, max_iter=None):
+def get_subs(username, max_iter=None):
     after = '_ignored'
     i = 0
     comments_by_sub = dict()
