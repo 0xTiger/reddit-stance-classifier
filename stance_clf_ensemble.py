@@ -2,21 +2,20 @@ import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from pushlib_utils import get_subs
 def warn(*args, **kwargs):
     pass
 import warnings
 warnings.warn = warn
 from sklearn.feature_extraction import DictVectorizer
-from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub
-from sklearn.feature_selection import SelectKBest, chi2
+from sklearn.feature_selection import VarianceThreshold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict, GridSearchCV
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
-from sklearn.base import clone
+from sklearn.multioutput import MultiOutputClassifier
+from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub
 import joblib
 import argparse
 
@@ -41,82 +40,78 @@ with open('user_profiles.json') as f:
 conditions = lambda user, data: user != '[deleted]'
 gen = ((user, data) for user, data in mldata.items() if conditions(user, data))
 
+# stancemap = {'libleft': (-1, -1), 
+#                 'libright': (-1, 1), 
+#                 'authleft': (1, -1), 
+#                 'authright': (1, 1),
+#                 'left': (0, -1),
+#                 'right': (0, 1),
+#                 'centrist': (0, 0),
+#                 'auth': (1, 0),
+#                 'lib': (-1, 0)}
+
+stancemap = {'libleft': (0, 0), 
+                'libright': (0, 1), 
+                'authleft': (1, 0), 
+                'authright': (1, 1)}
+
+stancemap_inv = {v:k for k,v in stancemap.items()}
+
+def stances_from_tuple(y, axis='both'):
+    if axis == 'both': stances = [stancemap_inv.get(tuple(t)) for t in y]
+    if axis == 'h': stances = [stancemap_inv.get((0, t[1])) for t in y]
+    if axis == 'v': stances = [stancemap_inv.get((t[0], 0)) for t in y]
+    return np.array(stances)
+
 users, features, labels = [], [], []
-users2, features2, labels2 = [], [], []
 for user, data in gen:
+    label = stancemap.get(data['stance'])
+    if label:
+        features.append(data['subs'])
+        labels.append(label)
 
-    if mldata[user]['stance'] in ['libleft', 'left', 'authleft']:
-        mldata[user]['h_stance'] = 'L'
-    if mldata[user]['stance'] in ['libright', 'libright2', 'right', 'authright']:
-        mldata[user]['h_stance'] = 'R'
-
-    if mldata[user]['stance'] in ['authleft', 'auth', 'authright']:
-        mldata[user]['v_stance'] = 'A'
-    if mldata[user]['stance'] in ['libleft', 'lib', 'libright']:
-        mldata[user]['v_stance'] = 'L'
-
-    if 'h_stance' in mldata[user]:
-        users.append(user)
-        features.append(mldata[user]['subs'])
-        labels.append(mldata[user]['h_stance'])
-
-    if 'v_stance' in mldata[user]:
-        users2.append(user)
-        features2.append(mldata[user]['subs'])
-        labels2.append(mldata[user]['v_stance'])
-
-
-h_stances = list(set(labels))
-v_stances = list(set(labels2))
-
+labels = np.array(labels)
 features = pd.Series(features)
-labels = pd.Series(labels)
-features2 = pd.Series(features2)
-labels2 = pd.Series(labels2)
 
 splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
 for train_index, test_index in splitter.split(features, labels):
     X_train, y_train = features[train_index], labels[train_index]
     X_test, y_test = features[test_index], labels[test_index]
 
-splitter2 = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-for train_index, test_index in splitter2.split(features2, labels2):
-    X_train2, y_train2 = features2[train_index], labels2[train_index]
-    X_test2, y_test2 = features2[test_index], labels2[test_index]
-
-
 log_clf = LogisticRegression(C=0.2, penalty='l1', solver='liblinear')
 forest_clf = RandomForestClassifier(min_samples_leaf=5, random_state=42)
 voting_clf = VotingClassifier(estimators=[('forest', forest_clf), ('logit', log_clf)],
                                 voting='soft')
 
+multi_clf = MultiOutputClassifier(forest_clf)
+
 full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)), #k in rel_subs
                             ('vectorizer', DictVectorizer(sparse=True)),
-                            ('selectKBest', SelectKBest(chi2, k=1000)),
+                            ('selectKBest', VarianceThreshold(threshold=1)),
                             ('scaler', StandardScaler(with_mean=False)),
                             ('framer', ToSparseDF()),
-                            ('clf', voting_clf)])
-full_pipeline2 = clone(full_pipeline)
+                            ('clf', multi_clf)])
 
 if __name__ == '__main__':
-    y_pred = cross_val_predict(full_pipeline, X_train, y_train, cv=5)
-    y_pred2 = cross_val_predict(full_pipeline2, X_train2, y_train2, cv=5)
+    y_pred = cross_val_predict(full_pipeline, X_train, y_train, cv=5, n_jobs=-1)
 
-    conf_mx = confusion_matrix(y_train, y_pred, labels=h_stances)
-    conf_mx2 = confusion_matrix(y_train2, y_pred2, labels=v_stances)
+    y_train_stances = stances_from_tuple(y_train)
+    y_pred_stances = stances_from_tuple(y_pred)
 
-    print(y_train.value_counts())
-    print(h_stances)
+    y_train_h_stances = stances_from_tuple(y_train, axis='h')
+    y_pred_h_stances = stances_from_tuple(y_pred, axis='h')
+    conf_mx = confusion_matrix(y_train_stances, y_pred_stances)    
+
+    print(y_train_stances)
+    print(y_pred_stances)
     print(conf_mx)
-    print('Precision: ', precision_score(y_train, y_pred, average='weighted'))
-    print('Recall: ', recall_score(y_train, y_pred, average='weighted'))
+    print('Precision: ', precision_score(y_train_stances, y_pred_stances, average='weighted'))
+    print('Recall: ', recall_score(y_train_stances, y_pred_stances, average='weighted'))
 
-    print(y_train2.value_counts())
-    print(v_stances)
-    print(conf_mx2)
-    print('Precision: ', precision_score(y_train2, y_pred2, average='weighted'))
-    print('Recall: ', recall_score(y_train2, y_pred2, average='weighted'))
-
+    conf_mx = confusion_matrix(y_train_h_stances, y_pred_h_stances)
+    print(conf_mx)
+    print('Precision: ', precision_score(y_train_h_stances, y_pred_h_stances, average='weighted'))
+    print('Recall: ', recall_score(y_train_h_stances, y_pred_h_stances, average='weighted'))
     # fig, ax = plt.subplots()
     # cax = ax.matshow(conf_mx, cmap=plt.cm.gray)
     # fig.colorbar(cax)
@@ -133,17 +128,11 @@ if __name__ == '__main__':
 
     # plt.show()
 
-full_pipeline.fit(X_train, y_train)
-full_pipeline2.fit(X_train2, y_train2)
 
 if __name__ == '__main__':
-    # log_ws = list(voting_clf.named_estimators_.logit.coef_[0])
-    # for sub, weight in sorted(zip(X_train.columns, log_ws), key=lambda x: x[1]):
-    #     print(sub, weight)
-
     if args.persist:
+        full_pipeline.fit(X_train, y_train)
         joblib.dump(full_pipeline, 'models/ensemble.pkl')
-        joblib.dump(full_pipeline2, 'models/ensemble2.pkl')
 
     # from prediction import pred_lean
     # print(pred_lean(['tigeer']))
