@@ -1,10 +1,11 @@
 import json
 import requests
+from collections import Counter
 
 def get_subs(username, max_iter=None):
     after = '_ignored'
     i = 0
-    comments_by_sub = dict()
+    comments_by_sub = Counter()
     while (not max_iter or i < max_iter) and after:
         i += 1
 
@@ -13,12 +14,8 @@ def get_subs(username, max_iter=None):
         r.raise_for_status()
         data = json.loads(r.text)
 
-        for comment in data['data']['children']:
-            sub = comment['data']['subreddit']
-            if sub in comments_by_sub:
-                comments_by_sub[sub] += 1
-            else:
-                comments_by_sub[sub] = 1
+        comments = data['data']['children']
+        comments_by_sub.update(comment['data']['subreddit'] for comment in comments)
 
         after = data['data']['after']
     return comments_by_sub
