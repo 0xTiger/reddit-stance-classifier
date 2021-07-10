@@ -8,21 +8,21 @@ def warn(*args, **kwargs):
 import warnings
 warnings.warn = warn
 from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_selection import VarianceThreshold
+from sklearn.feature_selection import SelectKBest
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict, GridSearchCV
+from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
-from sklearn.ensemble import RandomForestClassifier, VotingClassifier, RandomForestRegressor
-from sklearn.multioutput import MultiOutputClassifier, MultiOutputRegressor
-from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.multioutput import MultiOutputRegressor
+from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub, multi_chi2
+from timeit import default_timer as timer
 import joblib
 import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--persist', action='store_true', help='Specify whether to make the model persistent in models/*')
-
+parser.add_argument('--noval', action='store_true', help='specify whether to evaluate the model\'s performance')
 args = parser.parse_args()
 
 """
@@ -61,17 +61,14 @@ stancecolormap = {'libleft': 'green',
                 'auth': 'purple',
                 'lib': 'lime'}
 
-# stancemap = {'libleft': (0, 0), 
-#                 'libright': (0, 1), 
-#                 'authleft': (1, 0), 
-#                 'authright': (1, 1)}
-
 stancemap_inv = {v:k for k,v in stancemap.items()}
 
 def stances_from_tuple(y, axis='both'):
     if axis == 'both': stances = [stancemap_inv.get((round(t[0]), round(t[1]))) for t in y]
     if axis == 'h': stances = [stancemap_inv.get((0, round(t[1]))) for t in y]
     if axis == 'v': stances = [stancemap_inv.get((round(t[0]), 0)) for t in y]
+    if axis == 'h_binary': stances = [stancemap_inv.get((0, np.sign(t[1]))) for t in y]
+    if axis == 'v_binary': stances = [stancemap_inv.get((np.sign(t[0]), 0)) for t in y]
     return np.array(stances)
 
 users, features, labels = [], [], []
@@ -89,76 +86,78 @@ for train_index, test_index in splitter.split(features, labels):
     X_train, y_train = features[train_index], labels[train_index]
     X_test, y_test = features[test_index], labels[test_index]
 
-log_clf = LogisticRegression(C=0.2, penalty='l1', solver='liblinear')
+# log_clf = LogisticRegression(C=0.2, penalty='l1', solver='liblinear')
 forest_clf = RandomForestRegressor(min_samples_leaf=5, random_state=42)
-voting_clf = VotingClassifier(estimators=[('forest', forest_clf), ('logit', log_clf)],
-                                voting='soft')
+# voting_clf = VotingClassifier(estimators=[('forest', forest_clf), ('logit', log_clf)],
+#                                 voting='soft')
 
 multi_clf = MultiOutputRegressor(forest_clf)
 
-full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)), #k in rel_subs
+full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)),
                             ('vectorizer', DictVectorizer(sparse=True)),
-                            ('selectKBest', VarianceThreshold(threshold=30)),
+                            ('selectKBest', SelectKBest(multi_chi2, k=1000)),
                             ('scaler', StandardScaler(with_mean=False)),
                             ('framer', ToSparseDF()),
                             ('clf', multi_clf)])
 
 if __name__ == '__main__':
-    y_pred = cross_val_predict(full_pipeline, X_train, y_train, cv=5, n_jobs=-1)
-    stances = sorted(stancemap.keys())
-    y_train_stances = stances_from_tuple(y_train)
-    y_pred_stances = stances_from_tuple(y_pred)
+    if not args.noval:
+        start = timer()
+        y_pred = cross_val_predict(full_pipeline, X_train, y_train, cv=5, n_jobs=-1)
+        end = timer()
+        print(f'Trained in {end - start}')
+        stances = sorted(stancemap.keys())
 
-    y_train_h_stances = stances_from_tuple(y_train, axis='h')
-    y_pred_h_stances = stances_from_tuple(y_pred, axis='h')
-    conf_mx = confusion_matrix(y_train_stances, y_pred_stances)    
+        actual_stances, pred_stances, conf_matrices, precision_scores, recall_scores = dict(), dict(), dict(), dict(), dict()
+        for axis in ['both', 'h_binary', 'v_binary']:
+            if axis == 'h_binary':
+                relevant_idx = y_train[:, 1] != 0
+            elif axis == 'v_binary':
+                relevant_idx = y_train[:, 0] != 0
+            else:
+                relevant_idx = np.ones_like(y_train[:, 0], dtype=bool)
 
-    print(y_train_stances)
-    print(y_pred_stances)
-    print(stances)
-    print(conf_mx)
-    print('Precision: ', precision_score(y_train_stances, y_pred_stances, average='weighted'))
-    print('Recall: ', recall_score(y_train_stances, y_pred_stances, average='weighted'))
+            actual_stances[axis] = stances_from_tuple(y_train[relevant_idx], axis=axis)
+            pred_stances[axis] = stances_from_tuple(y_pred[relevant_idx], axis=axis)
+            conf_matrices[axis] = confusion_matrix(actual_stances[axis], pred_stances[axis])    
+            precision_scores[axis] = precision_score(actual_stances[axis], pred_stances[axis], average='weighted')
+            recall_scores[axis] = recall_score(actual_stances[axis], pred_stances[axis], average='weighted')
 
-    # conf_mx = confusion_matrix(y_train_h_stances, y_pred_h_stances)
-    # print(conf_mx)
-    # print('Precision: ', precision_score(y_train_h_stances, y_pred_h_stances, average='weighted'))
-    # print('Recall: ', recall_score(y_train_h_stances, y_pred_h_stances, average='weighted'))
-    fig, ax = plt.subplots()
-    cax = ax.matshow(conf_mx, cmap=plt.cm.gray)
-    fig.colorbar(cax)
+            print(np.unique(actual_stances[axis]))
+            print(conf_matrices[axis])
+            print(f'Precision: {precision_scores[axis]}')
+            print(f'Recall: {recall_scores[axis]}')
+        
+        fig, ax = plt.subplots()
+        cax = ax.matshow(conf_matrices['both'], cmap=plt.cm.gray)
+        fig.colorbar(cax)
 
-    ax.set_xticks(list(range(len(stances))))
-    ax.set_yticks(list(range(len(stances))))
-    ax.set_xticklabels(stances, rotation=45)
-    ax.set_yticklabels(stances)
+        ax.set_xticks(list(range(len(stances))))
+        ax.set_yticks(list(range(len(stances))))
+        ax.set_xticklabels(stances, rotation=45)
+        ax.set_yticklabels(stances)
 
 
-    xleft, xright = ax.get_xlim()
-    ybottom, ytop = ax.get_ylim()
-    ax.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
+        xleft, xright = ax.get_xlim()
+        ybottom, ytop = ax.get_ylim()
+        ax.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
+        
 
-    
+        fig2, ax2 = plt.subplots()
+        ax2.scatter(y_pred[:, 1], y_pred[:, 0],
+                    color=[stancecolormap.get(stance) for stance in actual_stances['both']],
+                    s=5, alpha=0.5)
+        ax2.axhline(0, color='k', linestyle='--')
+        ax2.axvline(0, color='k', linestyle='--')
+        ax2.set_xlabel('Left/Right')
+        ax2.set_ylabel('Lib/Auth')
+        ax2.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
 
-    fig2, ax2 = plt.subplots()
-    ax2.scatter(y_pred[:, 1], y_pred[:, 0],
-                color=[stancecolormap.get(stance) for stance in y_train_stances],
-                s=6)
-    ax2.axhline(0, color='k', linestyle='--')
-    ax2.axvline(0, color='k', linestyle='--')
-    ax2.set_xlabel('Left/Right')
-    ax2.set_ylabel('Lib/Auth')
-    ax2.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
+        ax2.legend(handles=[mlines.Line2D([], [], color=color, marker='.', linestyle='None',
+                            markersize=4, label=stance) for stance,color in stancecolormap.items()],
+                    bbox_to_anchor=(1.04,1), loc="upper left")
+        plt.show()
 
-    ax2.legend(handles=[mlines.Line2D([], [], color=color, marker='.', linestyle='None',
-                          markersize=6, label=stance) for stance,color in stancecolormap.items()],
-                bbox_to_anchor=(1.04,1), loc="upper left")
-    plt.show()
-
-if __name__ == '__main__':
     if args.persist:
         full_pipeline.fit(X_train, y_train)
         joblib.dump(full_pipeline, 'models/ensemble.pkl')
-
-    # from prediction import pred_lean
-    # print(pred_lean(['tigeer']))

@@ -1,7 +1,15 @@
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.feature_selection import chi2
+from math import log
 
 def exclude_u_sub(k): return k[:2] != 'u_'
+def scale(x): log(abs(x)+1)/log(2) * x/abs(x)
+
+def multi_chi2(X, y):
+    chisq_class1, p_class1 = chi2(X, y[:, 0])
+    chisq_class2, p_class2 = chi2(X, y[:, 1])
+    return chisq_class1 + chisq_class2, p_class1 + p_class2
 
 class DictFilterer(BaseEstimator, TransformerMixin):
     def __init__(self, predicate):
