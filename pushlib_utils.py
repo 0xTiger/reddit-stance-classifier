@@ -2,6 +2,28 @@ import json
 import requests
 from collections import Counter
 
+stancecolormap = {'libleft': 'green', 
+                'libright': 'yellow', 
+                'authleft': 'red', 
+                'authright': 'blue',
+                'left': 'maroon',
+                'right': 'cyan',
+                'centrist': 'grey',
+                'auth': 'purple',
+                'lib': 'lime'}
+                
+stancemap = {'libleft': (-1, -1), 
+        'libright': (-1, 1), 
+        'authleft': (1, -1), 
+        'authright': (1, 1),
+        'left': (0, -1),
+        'right': (0, 1),
+        'centrist': (0, 0),
+        'auth': (1, 0),
+        'lib': (-1, 0)}
+
+stancemap_inv = {v:k for k,v in stancemap.items()}
+
 def get_subs(username, max_iter=None):
     after = '_ignored'
     i = 0

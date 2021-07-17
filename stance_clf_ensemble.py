@@ -16,6 +16,7 @@ from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor
 from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub, multi_chi2
+from pushlib_utils import stancecolormap, stancemap, stancemap_inv
 from timeit import default_timer as timer
 import joblib
 import argparse
@@ -41,27 +42,6 @@ with open('user_profiles.json') as f:
 conditions = lambda user, data: user != '[deleted]'
 gen = ((user, data) for user, data in mldata.items() if conditions(user, data))
 
-stancemap = {'libleft': (-1, -1), 
-                'libright': (-1, 1), 
-                'authleft': (1, -1), 
-                'authright': (1, 1),
-                'left': (0, -1),
-                'right': (0, 1),
-                'centrist': (0, 0),
-                'auth': (1, 0),
-                'lib': (-1, 0)}
-
-stancecolormap = {'libleft': 'green', 
-                'libright': 'yellow', 
-                'authleft': 'red', 
-                'authright': 'blue',
-                'left': 'maroon',
-                'right': 'cyan',
-                'centrist': 'grey',
-                'auth': 'purple',
-                'lib': 'lime'}
-
-stancemap_inv = {v:k for k,v in stancemap.items()}
 
 def stances_from_tuple(y, axis='both'):
     if axis == 'both': stances = [stancemap_inv.get((round(t[0]), round(t[1]))) for t in y]
@@ -71,20 +51,7 @@ def stances_from_tuple(y, axis='both'):
     if axis == 'v_binary': stances = [stancemap_inv.get((np.sign(t[0]), 0)) for t in y]
     return np.array(stances)
 
-users, features, labels = [], [], []
-for user, data in gen:
-    label = stancemap.get(data['stance'])
-    if label:
-        features.append(data['subs'])
-        labels.append(label)
 
-labels = np.array(labels)
-features = pd.Series(features)
-
-splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-for train_index, test_index in splitter.split(features, labels):
-    X_train, y_train = features[train_index], labels[train_index]
-    X_test, y_test = features[test_index], labels[test_index]
 
 # log_clf = LogisticRegression(C=0.2, penalty='l1', solver='liblinear')
 forest_clf = RandomForestRegressor(min_samples_leaf=5, random_state=42)
@@ -101,6 +68,21 @@ full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)),
                             ('clf', multi_clf)])
 
 if __name__ == '__main__':
+    users, features, labels = [], [], []
+    for user, data in gen:
+        label = stancemap.get(data['stance'])
+        if label:
+            features.append(data['subs'])
+            labels.append(label)
+
+    labels = np.array(labels)
+    features = pd.Series(features)
+
+    splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
+    for train_index, test_index in splitter.split(features, labels):
+        X_train, y_train = features[train_index], labels[train_index]
+        X_test, y_test = features[test_index], labels[test_index]
+
     if not args.noval:
         start = timer()
         y_pred = cross_val_predict(full_pipeline, X_train, y_train, cv=5, n_jobs=-1)

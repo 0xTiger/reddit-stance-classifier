@@ -1,12 +1,17 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for
+from dash import Dash
+import dash_core_components as dcc
+import pandas as pd
+import plotly.graph_objects as go
 from flask_sqlalchemy import SQLAlchemy
 from prediction import pred_lean
 from requests.exceptions import HTTPError
+from pushlib_utils import stancecolormap, stancemap, stancemap_inv
 import numpy as np
 
 app = Flask(__name__)
-
+dashapp = Dash(__name__, server=app, url_base_pathname='/plots/')
 app.config.from_object(os.environ['APP_SETTINGS'])
 db = SQLAlchemy(app)
 
@@ -23,18 +28,6 @@ class User(db.Model):
         self.v_pos = v_pos
 
     def stance_name(self, axis='both'):
-
-        stancemap = {'libleft': (-1, -1), 
-                'libright': (-1, 1), 
-                'authleft': (1, -1), 
-                'authright': (1, 1),
-                'left': (0, -1),
-                'right': (0, 1),
-                'centrist': (0, 0),
-                'auth': (1, 0),
-                'lib': (-1, 0)}
-
-        stancemap_inv = {v:k for k,v in stancemap.items()}
 
         if axis == 'both': stance = stancemap_inv.get((round(self.v_pos), round(self.h_pos)))
         if axis == 'h': stance = stancemap_inv.get((0, round(self.h_pos)))
@@ -84,6 +77,50 @@ def success():
 @app.route("/about")
 def about():
     return render_template("about.html")
+
+df = pd.read_pickle('preds.pkl')[:10000]
+fig = go.Figure(data=[go.Scatter(x=df['h_pos'][df['actual'] == stance], 
+                                y=df['v_pos'][df['actual'] == stance], 
+                                mode='markers',
+                                marker_color=stancecolormap.get(stance),
+                                opacity=0.6,
+                                name=stance)
+                    for stance in sorted(stancemap.keys(), reverse=True)],
+
+                layout=go.Layout(
+                        title='Stances',
+                        margin=go.layout.Margin(l=0,r=0,b=8,t=8),
+                        autosize=True,
+                        )
+                )
+
+fig.update_xaxes(title_text='Left/Right', zeroline=True, zerolinewidth=2, zerolinecolor='black', range=[-1.1, 1.1], constrain='domain')
+fig.update_yaxes(title_text='Auth/Lib', zeroline=True, zerolinewidth=2, zerolinecolor='black', range=[-1.1, 1.1], scaleanchor='x', constrain='range')
+
+fig.update_layout(
+    
+    {"plot_bgcolor": "rgba(0, 10, 25, 0.3)", 
+    "paper_bgcolor": "rgba(0, 0, 0, 0)"})
+
+fig.update_layout(
+    legend=dict(
+        orientation='h'
+    )
+)
+
+fig.update_layout(
+    annotations=[
+            dict(
+                x=0,
+                y=0.75,
+                xref='paper',
+                yref='paper',
+                text='Trend',
+                showarrow=False
+            )]
+)
+
+dashapp.layout = dcc.Graph(id='stance-scatter',figure=fig, style={'height': '90vw'})
 
 if __name__ == '__main__':
     app.debug = True
