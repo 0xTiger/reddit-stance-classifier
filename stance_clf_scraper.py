@@ -1,32 +1,36 @@
-import requests
 import csv
-import json
-import os
-from pushlib_utils import get_subs
+import pandas as pd
+from requests.exceptions import HTTPError
+from pushlib_utils import get_comment_data, relevant_fields
 
-def backup(data, file):
-    with open(file, 'w') as o:
-        json.dump(data, o, indent=2)
-    print("Saved data @ " + file + ' with size: ' + str(round(os.path.getsize(file) / 1024)) + "KB")
-
-data_file = '..\\assets\\reddit\\polcompass\\polcompass.csv'
-save_file = 'user_profiles.json'
+data_file = '../polcompass/data/polcompass.csv'
+save_file = 'user_profiles.zip'
 
 with open(data_file) as f:
     reader = csv.reader(f)
-    users = {row[2]: row[3] for row in reader}
+    users = {row[2] for row in reader}
     total = len(users)
 
 try:
-    with open(save_file) as f:
-        mldata = json.load(f)
-except:
-    mldata = {}
+    mldata = pd.read_pickle(save_file)
+except FileNotFoundError:
+    mldata = pd.DataFrame()
 
-i = len(mldata)
-for user, stance in users.items():
-    if user not in mldata:
-        print(user, stance, str(round(i/total*100, 3)) + "% Done")
-        mldata[user] = {'stance': stance, 'subs': get_subs(user)}
-        i += 1
-        if i % 50 == 0: backup(mldata, save_file)
+for i, user in enumerate(users):
+    if mldata.empty or user not in mldata.index.levels[0]:
+        try:
+            comments = get_comment_data(user)
+        except HTTPError as e:
+            print(f'{user:<24} | HTTPError {e.response.status_code} thrown')
+            continue
+        if not comments:
+            print(f'{user:<24} | Had no comments')
+            continue
+
+        df = pd.DataFrame(comments)[relevant_fields]
+        df = pd.concat({user: df}, names=['user']) #Adds level to create MultiIndex
+        mldata = pd.concat([mldata, df])
+        print(f'{user:<24} | {len(df)} comments gathered')
+        if i % 50 == 0: 
+            mldata.to_pickle(save_file)
+            print(f'Size in memory: {mldata.memory_usage().sum() / 1024 / 1024:.2f}MB')

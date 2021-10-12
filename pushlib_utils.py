@@ -41,3 +41,46 @@ def get_subs(username, max_iter=None):
 
         after = data['data']['after']
     return comments_by_sub
+
+
+def get_comment_data(username, max_iter=None):
+    after = '_ignored'
+    i = 0
+    comments = []
+    while (not max_iter or i < max_iter) and after:
+        i += 1
+
+        url = f'https://www.reddit.com/user/{username}/comments.json?limit=100&after={after}'
+        r = requests.get(url, headers={'user-agent': 'tigeer\'s pushlib_utils module'})
+        r.raise_for_status()
+        data = json.loads(r.text)
+
+        comments_chunk = data['data']['children']
+        comments += comments_chunk
+
+        after = data['data']['after']
+    return [comment['data'] for comment in comments]
+
+
+relevant_fields = ['subreddit',
+                    'controversiality',
+                    'total_awards_received',
+                    'gilded',
+                    'author',
+                    'num_comments',
+                    'created_utc',
+                    'parent_id',
+                    'link_id',
+                    'id',
+                    'score',
+                    'author_fullname',
+                    'over_18',
+                    'body',
+                    'link_title',
+                    'link_author',
+                    'is_submitter',
+                    'author_flair_text',
+                    'created',
+                    'locked',
+                    'quarantine',
+                    'subreddit_type']
