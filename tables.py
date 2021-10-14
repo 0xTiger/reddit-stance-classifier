@@ -1,11 +1,12 @@
+import os
 from flask import Flask
-app = Flask(__name__)
-
 from flask_sqlalchemy import SQLAlchemy
-db = SQLAlchemy(app)
 from pushlib_utils import stancemap_inv
 import numpy as np
 
+app = Flask(__name__)
+app.config.from_object(os.environ['APP_SETTINGS'])
+db = SQLAlchemy(app)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -32,3 +33,37 @@ class User(db.Model):
     @classmethod
     def from_name(cls, username):
         return cls.query.filter_by(username=username).first()
+
+
+class Comment(db.Model):
+    id = db.Column(db.String(10), primary_key=True)
+    author = db.Column(db.String(32))
+    body = db.Column(db.String(4096))
+    subreddit = db.Column(db.String(32))
+    score = db.Column(db.Integer)
+    num_comments = db.Column(db.Integer)
+    created_utc = db.Column(db.Integer)
+    controversiality = db.Column(db.Integer)
+    total_awards_received = db.Column(db.Integer)
+ 
+    def __init__(self, 
+                id,
+                author,
+                body,
+                subreddit,
+                score,
+                num_comments,
+                created_utc,
+                controversiality,
+                total_awards_received,
+                **kwargs):
+        self.id = id
+        self.author = author
+        self.body = body
+        self.subreddit = subreddit
+        self.score = score
+        self.num_comments = num_comments
+        self.created_utc = created_utc
+        self.controversiality = controversiality
+        self.total_awards_received = total_awards_received
+ 
