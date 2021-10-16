@@ -11,7 +11,7 @@ db = SQLAlchemy(app)
 
 
 class User(db.Model):
-    name = db.Column(db.String(32), primary_key=True, unique=True)
+    name = db.Column(db.String, primary_key=True, unique=True)
     created_utc = db.Column(db.Integer)
     total_karma = db.Column(db.Integer)
     link_karma = db.Column(db.Integer)
@@ -24,7 +24,7 @@ class User(db.Model):
     is_mod = db.Column(db.Boolean)
     is_employee = db.Column(db.Boolean)
     comments = db.relationship('Comment', backref='user')
-    pred = db.relationship('Prediction', backref='user', uselist=False)
+    prediction = db.relationship('Prediction', backref='user', uselist=False)
 
     def __init__(self, 
                  name,
@@ -55,11 +55,12 @@ class User(db.Model):
 
     @classmethod
     def from_name(cls, name):
-        return cls.query.filter_by(name=name).first()
+        # Case insensitive search since Reddit usernames technically are
+        return cls.query.filter(db.func.lower(cls.name) == db.func.lower(name)).first()
 
 
 class Prediction(db.Model):
-    name = db.Column(db.String(32), db.ForeignKey('user.name'), primary_key=True, unique=True)
+    name = db.Column(db.String, db.ForeignKey('user.name'), primary_key=True, unique=True)
     h_pos = db.Column(db.Float)
     v_pos = db.Column(db.Float)
 
@@ -81,11 +82,11 @@ class Prediction(db.Model):
 
 
 class Comment(db.Model):
-    id = db.Column(db.String(10), primary_key=True)
-    author = db.Column(db.String(32), db.ForeignKey('user.name'))
-    body = db.Column(db.String(4096))
-    link_title = db.Column(db.String(2048))
-    subreddit = db.Column(db.String(32))
+    id = db.Column(db.String, primary_key=True)
+    author = db.Column(db.String, db.ForeignKey('user.name'))
+    body = db.Column(db.String)
+    link_title = db.Column(db.String)
+    subreddit = db.Column(db.String)
     score = db.Column(db.Integer)
     num_comments = db.Column(db.Integer)
     created_utc = db.Column(db.Integer)
