@@ -1,4 +1,4 @@
-import dash_core_components as dcc
+from dash import dcc
 import pandas as pd
 import plotly.graph_objects as go
 from pushlib_utils import stancecolormap, stancemap

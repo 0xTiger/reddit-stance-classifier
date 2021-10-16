@@ -1,6 +1,7 @@
 import joblib
 from collections import Counter
 from tables import User, Prediction
+
 full_pipeline = joblib.load('models/ensemble.pkl')
 
 def pred_lean(user: User) -> Prediction:
