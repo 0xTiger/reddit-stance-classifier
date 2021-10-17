@@ -23,8 +23,8 @@ class User(db.Model):
     is_gold = db.Column(db.Boolean)
     is_mod = db.Column(db.Boolean)
     is_employee = db.Column(db.Boolean)
-    comments = db.relationship('Comment', backref='user')
-    prediction = db.relationship('Prediction', backref='user', uselist=False)
+    comments = db.relationship('Comment', backref='user', cascade = "all, delete, delete-orphan")
+    prediction = db.relationship('Prediction', backref='user', uselist=False, cascade = "all, delete, delete-orphan")
 
     def __init__(self, 
                  name,
