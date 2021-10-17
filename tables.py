@@ -1,5 +1,5 @@
 import numpy as np
-from pushlib_utils import stancemap_inv
+from pushlib_utils import stancemap_inv, stancemap
 from connections import db
 
 
@@ -19,6 +19,7 @@ class User(db.Model):
     searches = db.Column(db.Integer)
     comments = db.relationship('Comment', backref='user', cascade = "all, delete, delete-orphan")
     prediction = db.relationship('Prediction', backref='user', uselist=False, cascade = "all, delete, delete-orphan")
+    stance = db.relationship('Stance', backref='user', uselist=False, cascade = "all, delete, delete-orphan")
 
     def __init__(self, 
                  name,
@@ -76,6 +77,31 @@ class Prediction(db.Model):
         return self.stance_name() + '.png'
 
 
+class Stance(db.Model):
+    name = db.Column(db.String, db.ForeignKey('user.name'), primary_key=True, unique=True)
+    h_pos = db.Column(db.Integer)
+    v_pos = db.Column(db.Integer)
+
+    def __init__(self, name, v_pos, h_pos):
+        self.name = name
+        self.h_pos = h_pos
+        self.v_pos = v_pos
+
+    def stance_name(self, axis='both'):
+        if axis == 'both': stance = stancemap_inv.get((round(self.v_pos), round(self.h_pos)))
+        if axis == 'h': stance = stancemap_inv.get((0, round(self.h_pos)))
+        if axis == 'v': stance = stancemap_inv.get((round(self.v_pos), 0))
+        if axis == 'h_binary': stance = stancemap_inv.get((0, np.sign(self.h_pos)))
+        if axis == 'v_binary': stance = stancemap_inv.get((np.sign(self.v_pos), 0))
+        return stance
+
+    def img(self):
+        return self.stance_name() + '.png'
+
+    @classmethod
+    def from_str(cls, username, stance_name):
+        return cls(username, *stancemap[stance_name])
+
 class Comment(db.Model):
     id = db.Column(db.String, primary_key=True)
     author = db.Column(db.String, db.ForeignKey('user.name'))
@@ -101,10 +127,10 @@ class Comment(db.Model):
                  total_awards_received,
                  **kwargs):
         self.id = id
-        self.author = author
-        self.body = body
-        self.link_title = link_title
-        self.subreddit = subreddit
+        self.author = author.replace('\x00', '\uFFFD')
+        self.body = body.replace('\x00', '\uFFFD')
+        self.link_title = link_title.replace('\x00', '\uFFFD')
+        self.subreddit = subreddit.replace('\x00', '\uFFFD')
         self.score = score
         self.num_comments = num_comments
         self.created_utc = created_utc

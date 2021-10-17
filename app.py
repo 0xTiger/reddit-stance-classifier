@@ -34,6 +34,8 @@ def success():
             db.session.add(user)
 
         user.searches += 1
+        if not user.prediction:
+            user.prediction = pred_lean(user)
         db.session.commit()
 
         return render_template("success.html", 
