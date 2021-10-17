@@ -1,18 +1,9 @@
-import os
-from flask import Flask, render_template, request, redirect, url_for
-from dash import Dash
-from flask_sqlalchemy import SQLAlchemy
+from flask import render_template, request, redirect, url_for
 from prediction import pred_lean
 from requests.exceptions import HTTPError
 from pushlib_utils import get_user_data, get_comment_data
 from tables import User, Comment, Prediction
-from dashapp_layout import layout
-
-app = Flask(__name__)
-dashapp = Dash(__name__, server=app, url_base_pathname='/plots/')
-app.config.from_object(os.environ['APP_SETTINGS'])
-db = SQLAlchemy(app)
-
+from connections import db, app
 
 @app.route("/")
 def index():
@@ -39,9 +30,11 @@ def success():
             user = User(**user_data)
             user.comments = [Comment(**comment_data) for comment_data in comments_data]
             user.prediction = pred_lean(user)
-
+            
             db.session.add(user)
-            db.session.commit()
+
+        user.searches += 1
+        db.session.commit()
 
         return render_template("success.html", 
                                 stance_name=user.prediction.stance_name(),
@@ -63,5 +56,4 @@ def about():
 
 if __name__ == '__main__':
     app.debug = True
-    dashapp.layout = layout
     app.run()

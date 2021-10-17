@@ -1,8 +1,15 @@
-from dash import dcc
+import os
 import pandas as pd
+from flask import Flask
+from dash import Dash, dcc
+from flask_sqlalchemy import SQLAlchemy
 import plotly.graph_objects as go
 from pushlib_utils import stancecolormap, stancemap
 
+app = Flask(__name__)
+dashapp = Dash(__name__, server=app, url_base_pathname='/plots/')
+app.config.from_object(os.environ['APP_SETTINGS'])
+db = SQLAlchemy(app)
 
 custom_font = dict(family="Courier New, monospace",
                     size=14,
@@ -41,4 +48,4 @@ fig = go.Figure(data=[go.Scatter(x=df['h_pos'][df['actual'] == stance],
 fig.update_xaxes(zeroline=True, zerolinewidth=2, zerolinecolor='black', range=[-1.1, 1.1], constrain='domain')
 fig.update_yaxes(zeroline=True, zerolinewidth=2, zerolinecolor='black', range=[-1.1, 1.1], scaleanchor='x', constrain='range')
 
-layout = dcc.Graph(id='stance-scatter',figure=fig, style={'height': '90vw'})
+dashapp.layout = dcc.Graph(id='stance-scatter',figure=fig, style={'height': '90vw'})

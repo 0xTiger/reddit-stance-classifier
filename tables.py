@@ -1,13 +1,6 @@
-import os
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from pushlib_utils import stancemap_inv
 import numpy as np
-
-
-app = Flask(__name__)
-app.config.from_object(os.environ['APP_SETTINGS'])
-db = SQLAlchemy(app)
+from pushlib_utils import stancemap_inv
+from connections import db
 
 
 class User(db.Model):
@@ -23,6 +16,7 @@ class User(db.Model):
     is_gold = db.Column(db.Boolean)
     is_mod = db.Column(db.Boolean)
     is_employee = db.Column(db.Boolean)
+    searches = db.Column(db.Integer)
     comments = db.relationship('Comment', backref='user', cascade = "all, delete, delete-orphan")
     prediction = db.relationship('Prediction', backref='user', uselist=False, cascade = "all, delete, delete-orphan")
 
@@ -52,6 +46,7 @@ class User(db.Model):
         self.is_gold = is_gold
         self.is_mod = is_mod
         self.is_employee = is_employee
+        self.searches = 0
 
     @classmethod
     def from_name(cls, name):
