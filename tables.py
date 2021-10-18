@@ -109,7 +109,6 @@ class Comment(db.Model):
     link_title = db.Column(db.String)
     subreddit = db.Column(db.String)
     score = db.Column(db.Integer)
-    num_comments = db.Column(db.Integer)
     created_utc = db.Column(db.Integer)
     controversiality = db.Column(db.Integer)
     total_awards_received = db.Column(db.Integer)
@@ -121,7 +120,6 @@ class Comment(db.Model):
                  link_title,
                  subreddit,
                  score,
-                 num_comments,
                  created_utc,
                  controversiality,
                  total_awards_received,
@@ -132,7 +130,6 @@ class Comment(db.Model):
         self.link_title = link_title.replace('\x00', '\uFFFD')
         self.subreddit = subreddit.replace('\x00', '\uFFFD')
         self.score = score
-        self.num_comments = num_comments
         self.created_utc = created_utc
         self.controversiality = controversiality
         self.total_awards_received = total_awards_received

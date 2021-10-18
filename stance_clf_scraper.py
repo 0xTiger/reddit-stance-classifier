@@ -6,12 +6,18 @@ from connections import db
 
 data_file = '../polcompass/data/polcompass.csv'
 save_file = 'user_profiles.zip'
+nonexist_file = 'nonexist.csv'
+
+with open(nonexist_file) as f:
+    reader = csv.reader(f)
+    nonexist = {row[0] for row in reader}
 
 with open(data_file) as f:
     reader = csv.reader(f)
-    usernames = {row[2]: row[3] for row in reader}
+    usernames = {row[2]: row[3] for row in reader if row[2] not in nonexist}
     total = len(usernames)
 
+nonexist_new = set() # Buffer-Like construction that we use to write non-existent users to csv
 for i, (username, stance_name) in enumerate(usernames.items()):
     if stance_name == 'libright2':
         stance_name = 'libright'
@@ -21,6 +27,8 @@ for i, (username, stance_name) in enumerate(usernames.items()):
             comments_data = get_comment_data(username)
         except HTTPError as e:
             print(f'{username:<24} | HTTPError {e.response.status_code} thrown')
+            if e.response.status_code in [404, 403]:
+                nonexist_new.add(username)
             continue
 
         user = User(**user_data)
@@ -30,6 +38,11 @@ for i, (username, stance_name) in enumerate(usernames.items()):
         db.session.commit()
 
         print(f'{username:<24} | {len(comments_data)} comments gathered')
-        if i % 50 == 0: 
-            tablesize = db.engine.execute("SELECT pg_size_pretty(pg_total_relation_size('public.comment'))").result()[0]
-            print(f'{tablesize = }')
+        if i % 20 == 0: 
+            tablesize = db.engine.execute("SELECT pg_size_pretty(pg_total_relation_size('public.comment'))").first()[0]
+            print(f'Table size in db: {tablesize}')
+
+            with open(nonexist_file, 'a') as f:
+                writer = csv.writer(f)
+                writer.writerows([[name] for name in nonexist_new])
+                nonexist_new = set()

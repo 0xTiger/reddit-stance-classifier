@@ -50,26 +50,3 @@ stancemap = {'libleft': (-1, -1),
         'lib': (-1, 0)}
 
 stancemap_inv = {v:k for k,v in stancemap.items()}
-
-relevant_fields = ['subreddit',
-                    'controversiality',
-                    'total_awards_received',
-                    'gilded',
-                    'author',
-                    'num_comments',
-                    'created_utc',
-                    'parent_id',
-                    'link_id',
-                    'id',
-                    'score',
-                    'author_fullname',
-                    'over_18',
-                    'body',
-                    'link_title',
-                    'link_author',
-                    'is_submitter',
-                    'author_flair_text',
-                    'created',
-                    'locked',
-                    'quarantine',
-                    'subreddit_type']
