@@ -1,21 +1,89 @@
-import os
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from pushlib_utils import stancemap_inv
 import numpy as np
+from pushlib_utils import stancemap_inv, stancemap
+from connections import db
 
-app = Flask(__name__)
-app.config.from_object(os.environ['APP_SETTINGS'])
-db = SQLAlchemy(app)
 
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(32), unique=True)
+    name = db.Column(db.String, primary_key=True, unique=True)
+    created_utc = db.Column(db.Integer)
+    total_karma = db.Column(db.Integer)
+    link_karma = db.Column(db.Integer)
+    comment_karma = db.Column(db.Integer)
+    awardee_karma = db.Column(db.Integer)
+    awarder_karma = db.Column(db.Integer)
+    has_verified_email = db.Column(db.Boolean)
+    verified = db.Column(db.Boolean)
+    is_gold = db.Column(db.Boolean)
+    is_mod = db.Column(db.Boolean)
+    is_employee = db.Column(db.Boolean)
+    searches = db.Column(db.Integer)
+    comments = db.relationship('Comment', backref='user', cascade = "all, delete, delete-orphan")
+    prediction = db.relationship('Prediction', backref='user', uselist=False, cascade = "all, delete, delete-orphan")
+    stance = db.relationship('Stance', backref='user', uselist=False, cascade = "all, delete, delete-orphan")
+
+    def __init__(self, 
+                 name,
+                 created_utc,
+                 total_karma,
+                 link_karma,
+                 comment_karma,
+                 awardee_karma,
+                 awarder_karma,
+                 has_verified_email,
+                 verified,
+                 is_gold,
+                 is_mod,
+                 is_employee,
+                 **kwargs):
+        self.name = name
+        self.created_utc = created_utc
+        self.total_karma = total_karma
+        self.link_karma = link_karma
+        self.comment_karma = comment_karma
+        self.awardee_karma = awardee_karma
+        self.awarder_karma = awarder_karma
+        self.has_verified_email = has_verified_email
+        self.verified = verified
+        self.is_gold = is_gold
+        self.is_mod = is_mod
+        self.is_employee = is_employee
+        self.searches = 0
+
+    @classmethod
+    def from_name(cls, name):
+        # Case insensitive search since Reddit usernames technically are
+        return cls.query.filter(db.func.lower(cls.name) == db.func.lower(name)).first()
+
+
+class Prediction(db.Model):
+    name = db.Column(db.String, db.ForeignKey('user.name'), primary_key=True, unique=True)
     h_pos = db.Column(db.Float)
     v_pos = db.Column(db.Float)
 
-    def __init__(self, username, v_pos, h_pos):
-        self.username = username
+    def __init__(self, name, v_pos, h_pos):
+        self.name = name
+        self.h_pos = h_pos
+        self.v_pos = v_pos
+
+    def stance_name(self, axis='both'):
+        if axis == 'both': stance = stancemap_inv.get((round(self.v_pos), round(self.h_pos)))
+        if axis == 'h': stance = stancemap_inv.get((0, round(self.h_pos)))
+        if axis == 'v': stance = stancemap_inv.get((round(self.v_pos), 0))
+        if axis == 'h_binary': stance = stancemap_inv.get((0, np.sign(self.h_pos)))
+        if axis == 'v_binary': stance = stancemap_inv.get((np.sign(self.v_pos), 0))
+        return stance
+
+    def img(self):
+        return self.stance_name() + '.png'
+
+
+class Stance(db.Model):
+    name = db.Column(db.String, db.ForeignKey('user.name'), primary_key=True, unique=True)
+    h_pos = db.Column(db.Integer)
+    v_pos = db.Column(db.Integer)
+
+    def __init__(self, name, v_pos, h_pos):
+        self.name = name
         self.h_pos = h_pos
         self.v_pos = v_pos
 
@@ -31,38 +99,37 @@ class User(db.Model):
         return self.stance_name() + '.png'
 
     @classmethod
-    def from_name(cls, username):
-        return cls.query.filter_by(username=username).first()
-
+    def from_str(cls, username, stance_name):
+        return cls(username, *stancemap[stance_name])
 
 class Comment(db.Model):
-    id = db.Column(db.String(10), primary_key=True)
-    author = db.Column(db.String(32))
-    body = db.Column(db.String(4096))
-    subreddit = db.Column(db.String(32))
+    id = db.Column(db.String, primary_key=True)
+    author = db.Column(db.String, db.ForeignKey('user.name'))
+    body = db.Column(db.String)
+    link_title = db.Column(db.String)
+    subreddit = db.Column(db.String)
     score = db.Column(db.Integer)
-    num_comments = db.Column(db.Integer)
     created_utc = db.Column(db.Integer)
     controversiality = db.Column(db.Integer)
     total_awards_received = db.Column(db.Integer)
  
     def __init__(self, 
-                id,
-                author,
-                body,
-                subreddit,
-                score,
-                num_comments,
-                created_utc,
-                controversiality,
-                total_awards_received,
-                **kwargs):
+                 id,
+                 author,
+                 body,
+                 link_title,
+                 subreddit,
+                 score,
+                 created_utc,
+                 controversiality,
+                 total_awards_received,
+                 **kwargs):
         self.id = id
-        self.author = author
-        self.body = body
-        self.subreddit = subreddit
+        self.author = author.replace('\x00', '\uFFFD')
+        self.body = body.replace('\x00', '\uFFFD')
+        self.link_title = link_title.replace('\x00', '\uFFFD')
+        self.subreddit = subreddit.replace('\x00', '\uFFFD')
         self.score = score
-        self.num_comments = num_comments
         self.created_utc = created_utc
         self.controversiality = controversiality
         self.total_awards_received = total_awards_received

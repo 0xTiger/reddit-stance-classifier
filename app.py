@@ -1,17 +1,9 @@
-import os
-from flask import Flask, render_template, request, redirect, url_for
-from dash import Dash
-from flask_sqlalchemy import SQLAlchemy
+from flask import render_template, request, redirect, url_for
 from prediction import pred_lean
 from requests.exceptions import HTTPError
-from tables import User
-from dashapp_layout import layout
-
-app = Flask(__name__)
-dashapp = Dash(__name__, server=app, url_base_pathname='/plots/')
-app.config.from_object(os.environ['APP_SETTINGS'])
-db = SQLAlchemy(app)
-
+from pushlib_utils import get_user_data, get_comment_data
+from tables import User, Comment, Prediction
+from connections import db, app
 
 @app.route("/")
 def index():
@@ -24,27 +16,37 @@ def success():
         username = request.form['username']
         if not username:
             return render_template("failure.html", error='Please enter a username')
-        # Check if user is cached
-        current_user = User.from_name(username)
-        if not current_user:
+        # Check if user is in db
+        user = User.from_name(username)
+        if not user:
             try:
-                pred_stance = pred_lean(username)
-            except ValueError as err:
-                return render_template("failure.html", error=str(err))
+                user_data = get_user_data(username)
+                comments_data = get_comment_data(username)
             except HTTPError as err:
+                if err.response.status_code == 404:
+                    return render_template("failure.html", error=f'User \'{username}\' does not exist')
                 return render_template("failure.html", error='External API error')
 
-            current_user = User(username, *pred_stance)
-            db.session.add(current_user)
-            db.session.commit()
+            user = User(**user_data)
+            user.comments = [Comment(**comment_data) for comment_data in comments_data]
+            user.prediction = pred_lean(user)
+            
+            db.session.add(user)
 
-        return render_template("success.html", stance_name=current_user.stance_name(),
-                                                user=username,
-                                                img=current_user.img(),
-                                                h_fullstance= current_user.stance_name(axis='h_binary'),
-                                                v_fullstance= current_user.stance_name(axis='v_binary'),
-                                                h_confidence=f'{abs(current_user.h_pos):.0%}',
-                                                v_confidence=f'{abs(current_user.v_pos):.0%}')
+        user.searches += 1
+        if not user.prediction:
+            user.prediction = pred_lean(user)
+        db.session.commit()
+
+        return render_template("success.html", 
+                                stance_name=user.prediction.stance_name(),
+                                user=user.name,
+                                img=user.prediction.img(),
+                                h_fullstance= user.prediction.stance_name(axis='h_binary'),
+                                v_fullstance= user.prediction.stance_name(axis='v_binary'),
+                                h_confidence=f'{abs(user.prediction.h_pos):.0%}',
+                                v_confidence=f'{abs(user.prediction.v_pos):.0%}')
+
     elif request.method == 'GET':
         return redirect(url_for('index'))
 
@@ -56,5 +58,4 @@ def about():
 
 if __name__ == '__main__':
     app.debug = True
-    dashapp.layout = layout
     app.run()

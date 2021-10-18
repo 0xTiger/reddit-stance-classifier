@@ -1,26 +1,22 @@
 import joblib
-from requests.exceptions import HTTPError
-from pushlib_utils import get_subs
+from collections import Counter
+from tables import User, Prediction
 
 full_pipeline = joblib.load('models/ensemble.pkl')
 
-def pred_lean(name):
-    try:
-        sub_dict = get_subs(name)
-        total = sum(n for n in sub_dict.values())
-        if total < 800 or total >= 1000 + 10:
-            scale = 1
-        elif 800 <= total < 950:
-            scale = ((1200 - 800)/(950 - 800)*(total - 800) + 800)/total
-        elif 950 <= total < 1000 + 10:
-            scale = ((3500 - 1200)/(1000 - 950)*(total - 950) + 1200)/total
-            
-        sub_dict = {k: scale*v for k,v in sub_dict.items()}
+def pred_lean(user: User) -> Prediction:
+    subreddit_counts = Counter(comment.subreddit for comment in user.comments)
+    total = sum(n for n in subreddit_counts.values())
+    if total < 800 or total >= 1000 + 10:
+        scale = 1
+    elif 800 <= total < 950:
+        scale = ((1200 - 800)/(950 - 800)*(total - 800) + 800)/total
+    elif 950 <= total < 1000 + 10:
+        scale = ((3500 - 1200)/(1000 - 950)*(total - 950) + 1200)/total
+        
+    subreddit_counts = {k: scale*v for k,v in subreddit_counts.items()}
 
-    except HTTPError as err:
-        if err.response.status_code == 404:
-            raise ValueError(f'User \'{name}\' does not exist')
-    if not dict:
-        raise ValueError(f'User \'{name}\' has no comment history')
+    v_pos, h_pos = full_pipeline.predict([subreddit_counts])[0]
+    return Prediction(name=user.name, v_pos=v_pos, h_pos=h_pos)
 
-    return full_pipeline.predict([sub_dict])[0]
+

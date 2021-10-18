@@ -3,3 +3,4 @@ assets_dev
 venv
 vars
 .vscode
+nonexist.csv

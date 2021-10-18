@@ -1,36 +1,48 @@
 import csv
-import pandas as pd
 from requests.exceptions import HTTPError
-from pushlib_utils import get_comment_data, relevant_fields
+from pushlib_utils import get_comment_data, get_user_data
+from tables import User, Comment, Stance
+from connections import db
 
 data_file = '../polcompass/data/polcompass.csv'
 save_file = 'user_profiles.zip'
+nonexist_file = 'nonexist.csv'
+
+with open(nonexist_file) as f:
+    reader = csv.reader(f)
+    nonexist = {row[0] for row in reader}
 
 with open(data_file) as f:
     reader = csv.reader(f)
-    users = {row[2] for row in reader}
-    total = len(users)
+    usernames = {row[2]: row[3] for row in reader if row[2] not in nonexist}
+    total = len(usernames)
 
-try:
-    mldata = pd.read_pickle(save_file)
-except FileNotFoundError:
-    mldata = pd.DataFrame()
-
-for i, user in enumerate(users):
-    if mldata.empty or user not in mldata.index.levels[0]:
+nonexist_new = set() # Buffer-Like construction that we use to write non-existent users to csv
+for i, (username, stance_name) in enumerate(usernames.items()):
+    if stance_name == 'libright2':
+        stance_name = 'libright'
+    if stance_name != 'None' and not User.from_name(username):
         try:
-            comments = get_comment_data(user)
+            user_data = get_user_data(username)
+            comments_data = get_comment_data(username)
         except HTTPError as e:
-            print(f'{user:<24} | HTTPError {e.response.status_code} thrown')
-            continue
-        if not comments:
-            print(f'{user:<24} | Had no comments')
+            print(f'{username:<24} | HTTPError {e.response.status_code} thrown')
+            if e.response.status_code in [404, 403]:
+                nonexist_new.add(username)
             continue
 
-        df = pd.DataFrame(comments)[relevant_fields]
-        df = pd.concat({user: df}, names=['user']) #Adds level to create MultiIndex
-        mldata = pd.concat([mldata, df])
-        print(f'{user:<24} | {len(df)} comments gathered')
-        if i % 50 == 0: 
-            mldata.to_pickle(save_file)
-            print(f'Size in memory: {mldata.memory_usage().sum() / 1024 / 1024:.2f}MB')
+        user = User(**user_data)
+        user.comments = [Comment(**comment_data) for comment_data in comments_data]
+        user.stance = Stance.from_str(username, stance_name)
+        db.session.add(user)
+        db.session.commit()
+
+        print(f'{username:<24} | {len(comments_data)} comments gathered')
+        if i % 20 == 0: 
+            tablesize = db.engine.execute("SELECT pg_size_pretty(pg_total_relation_size('public.comment'))").first()[0]
+            print(f'Table size in db: {tablesize}')
+
+            with open(nonexist_file, 'a') as f:
+                writer = csv.writer(f)
+                writer.writerows([[name] for name in nonexist_new])
+                nonexist_new = set()
