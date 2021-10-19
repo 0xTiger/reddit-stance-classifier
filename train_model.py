@@ -1,8 +1,9 @@
-import json
-import pandas as pd
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
+import joblib
+import argparse
 def warn(*args, **kwargs):
     pass
 import warnings
@@ -16,50 +17,17 @@ from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor
 from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub, multi_chi2
-from pushlib_utils import stancecolormap, stancemap, stancemap_inv
+from pushlib_utils import stancecolormap, stancemap, stance_name_from_tuple
 from timeit import default_timer as timer
-import joblib
-import argparse
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--persist', action='store_true', help='Specify whether to make the model persistent in models/*')
 parser.add_argument('--noval', action='store_true', help='specify whether to evaluate the model\'s performance')
 args = parser.parse_args()
 
-"""
-TODO
-find best model:
-best sofar: LinearSVC(C=100, loss='hinge', random_state=42)--
-best sofar: RandomForestClassifier(min_samples_leaf=3, random_state=42)--
-best sofar: VotingClassifier()--
-
-Try different regularization (possibly less this time with larger dataset)
-using GridSearchCV, also try giving more noteable users a greater sample_weight in .fit() method for the
-"""
-with open('user_profiles.json') as f:
-    mldata = json.load(f)
-
-conditions = lambda user, data: user != '[deleted]'
-gen = ((user, data) for user, data in mldata.items() if conditions(user, data))
-
-
-def stances_from_tuple(y, axis='both'):
-    if axis == 'both': stances = [stancemap_inv.get((round(t[0]), round(t[1]))) for t in y]
-    if axis == 'h': stances = [stancemap_inv.get((0, round(t[1]))) for t in y]
-    if axis == 'v': stances = [stancemap_inv.get((round(t[0]), 0)) for t in y]
-    if axis == 'h_binary': stances = [stancemap_inv.get((0, np.sign(t[1]))) for t in y]
-    if axis == 'v_binary': stances = [stancemap_inv.get((np.sign(t[0]), 0)) for t in y]
-    return np.array(stances)
-
-
-
-# log_clf = LogisticRegression(C=0.2, penalty='l1', solver='liblinear')
 forest_clf = RandomForestRegressor(min_samples_leaf=5, random_state=42)
-# voting_clf = VotingClassifier(estimators=[('forest', forest_clf), ('logit', log_clf)],
-#                                 voting='soft')
-
 multi_clf = MultiOutputRegressor(forest_clf)
-
 full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)),
                             ('vectorizer', DictVectorizer(sparse=True)),
                             ('selectKBest', SelectKBest(multi_chi2, k=1000)),
@@ -68,12 +36,23 @@ full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)),
                             ('clf', multi_clf)])
 
 if __name__ == '__main__':
-    users, features, labels = [], [], []
-    for user, data in gen:
-        label = stancemap.get(data['stance'])
-        if label:
-            features.append(data['subs'])
-            labels.append(label)
+    from tables import Comment, User, db
+    from collections import defaultdict
+
+    comment_groups = Comment.query.with_entities(Comment.author, Comment.subreddit, db.func.count(Comment.subreddit))\
+                            .group_by(Comment.author, Comment.subreddit)\
+                            .all()
+
+    subreddit_counts = defaultdict(dict)
+    for author, subreddit, count in comment_groups:
+        subreddit_counts[author][subreddit] = count
+
+    features, labels = [], []
+    for author, subs in subreddit_counts.items():
+        user = User.from_name(author)
+        if user and user.stance:
+            features.append(subs)
+            labels.append((user.stance.v_pos, user.stance.h_pos))
 
     labels = np.array(labels)
     features = pd.Series(features)
@@ -99,8 +78,8 @@ if __name__ == '__main__':
             else:
                 relevant_idx = np.ones_like(y_train[:, 0], dtype=bool)
 
-            actual_stances[axis] = stances_from_tuple(y_train[relevant_idx], axis=axis)
-            pred_stances[axis] = stances_from_tuple(y_pred[relevant_idx], axis=axis)
+            actual_stances[axis] = np.array(list(map(lambda t: stance_name_from_tuple(t, axis=axis), y_train[relevant_idx])))
+            pred_stances[axis] = np.array(list(map(lambda t: stance_name_from_tuple(t, axis=axis), y_pred[relevant_idx])))
             conf_matrices[axis] = confusion_matrix(actual_stances[axis], pred_stances[axis])    
             precision_scores[axis] = precision_score(actual_stances[axis], pred_stances[axis], average='weighted')
             recall_scores[axis] = recall_score(actual_stances[axis], pred_stances[axis], average='weighted')

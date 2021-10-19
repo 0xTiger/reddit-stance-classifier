@@ -1,5 +1,4 @@
-import numpy as np
-from pushlib_utils import stancemap_inv, stancemap
+from pushlib_utils import stancemap, stance_name_from_tuple
 from connections import db
 
 
@@ -66,12 +65,7 @@ class Prediction(db.Model):
         self.v_pos = v_pos
 
     def stance_name(self, axis='both'):
-        if axis == 'both': stance = stancemap_inv.get((round(self.v_pos), round(self.h_pos)))
-        if axis == 'h': stance = stancemap_inv.get((0, round(self.h_pos)))
-        if axis == 'v': stance = stancemap_inv.get((round(self.v_pos), 0))
-        if axis == 'h_binary': stance = stancemap_inv.get((0, np.sign(self.h_pos)))
-        if axis == 'v_binary': stance = stancemap_inv.get((np.sign(self.v_pos), 0))
-        return stance
+        return stance_name_from_tuple((self.v_pos, self.h_pos), axis=axis)
 
     def img(self):
         return self.stance_name() + '.png'
@@ -88,12 +82,7 @@ class Stance(db.Model):
         self.v_pos = v_pos
 
     def stance_name(self, axis='both'):
-        if axis == 'both': stance = stancemap_inv.get((round(self.v_pos), round(self.h_pos)))
-        if axis == 'h': stance = stancemap_inv.get((0, round(self.h_pos)))
-        if axis == 'v': stance = stancemap_inv.get((round(self.v_pos), 0))
-        if axis == 'h_binary': stance = stancemap_inv.get((0, np.sign(self.h_pos)))
-        if axis == 'v_binary': stance = stancemap_inv.get((np.sign(self.v_pos), 0))
-        return stance
+        return stance_name_from_tuple((self.v_pos, self.h_pos), axis=axis)
 
     def img(self):
         return self.stance_name() + '.png'

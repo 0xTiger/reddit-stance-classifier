@@ -1,5 +1,16 @@
+import numpy as np
 import json
 import requests
+
+
+def stance_name_from_tuple(t, axis='both'):
+    v_pos, h_pos = t
+    if axis == 'both': stance = stancemap_inv.get((round(v_pos), round(h_pos)))
+    if axis == 'h': stance = stancemap_inv.get((0, round(h_pos)))
+    if axis == 'v': stance = stancemap_inv.get((round(v_pos), 0))
+    if axis == 'h_binary': stance = stancemap_inv.get((0, np.sign(h_pos)))
+    if axis == 'v_binary': stance = stancemap_inv.get((np.sign(v_pos), 0))
+    return stance
 
 
 def get_user_data(username):
