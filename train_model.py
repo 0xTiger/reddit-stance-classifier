@@ -16,7 +16,7 @@ from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor
-from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub, multi_chi2
+from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub, multi_f_classif
 from pushlib_utils import stancecolormap, stancemap, stance_name_from_tuple
 from timeit import default_timer as timer
 
@@ -30,7 +30,7 @@ forest_clf = RandomForestRegressor(min_samples_leaf=5, random_state=42)
 multi_clf = MultiOutputRegressor(forest_clf)
 full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)),
                             ('vectorizer', DictVectorizer(sparse=True)),
-                            ('selectKBest', SelectKBest(multi_chi2, k=1000)),
+                            ('selectKBest', SelectKBest(multi_f_classif, k=1000)),
                             ('scaler', StandardScaler(with_mean=False)),
                             ('framer', ToSparseDF()),
                             ('clf', multi_clf)])
