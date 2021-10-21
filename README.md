@@ -1,22 +1,16 @@
 # reddit-stance-classifier
-A Flask webapp & Python scripts for predicting reddit users' political leaning, using their comment history.
+A Flask webapp & Python scripts for predicting reddit users' political leaning, using their comment history. The backend is a postgreSQL database which is queried using Flask_SQLAlchemy.
 
 
-### usage
+### Usage
 View the [live webapp](https://www.reddit-lean.com)
 
-Alternatively: Run one of the classifiers from the command line using the interactive shell option and call `pred_lean`
+A model has been trained and pickled already in `models/ensemble.pkl`
+If you wish to train your own model, first the postgres db must be set up and data added to it using `scraper.py`. 
 
-```python3
-\reddit-stance-classifier>python
->>>from prediction import pred_lean
->>>pred_lean('userMcUserFace01010101')
-('L', 'L', 0.821243598285102, 0.893544755401233)
-```
-The tuple returned is of the form `(h_stance, v_stance, h_confidence, v_confidence)`
+`train_model.py` can then be run with various flags
 
-
-### example instance of data
+### Example instance of data
 ```json
 "userMcUserFace01010101": {
   "stance": "libleft",
@@ -45,7 +39,7 @@ In this example the `"subs"` from this instance of data would be encoded into a 
 The model that has subsequently been trained to predict `"stance"` would then make a prediction for this new instance of data.
 
 
-### conclusion
+### Conclusion
 
 As of writing a precision and recall of ~0.8 can be achieved on the unseen test set.
 It is important to note however, that there may be significant selection bias as all instances of data are from users of r/politicalcompassmemes.

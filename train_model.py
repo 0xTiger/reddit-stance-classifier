@@ -17,7 +17,7 @@ from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor
 from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub, multi_f_classif
-from pushlib_utils import stancecolormap, stancemap, stance_name_from_tuple
+from utils import stancecolormap, stancemap, stance_name_from_tuple
 from timeit import default_timer as timer
 
 
