@@ -15,7 +15,7 @@ def stance_name_from_tuple(t, axis='both'):
 
 def get_user_data(username):
     url = f'https://www.reddit.com/user/{username}/about.json'
-    r = requests.get(url, headers={'user-agent': 'tigeer\'s pushlib_utils module'})
+    r = requests.get(url, headers={'user-agent': 'tigeer\'s utils module'})
     r.raise_for_status()
     data = json.loads(r.text)
     return data['data']
@@ -29,7 +29,7 @@ def get_comment_data(username, max_iter=None):
         i += 1
 
         url = f'https://www.reddit.com/user/{username}/comments.json?limit=100&after={after}'
-        r = requests.get(url, headers={'user-agent': 'tigeer\'s pushlib_utils module'})
+        r = requests.get(url, headers={'user-agent': 'tigeer\'s utils module'})
         r.raise_for_status()
         data = json.loads(r.text)
 

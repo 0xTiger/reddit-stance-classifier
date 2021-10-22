@@ -1,4 +1,4 @@
-from pushlib_utils import stancemap, stance_name_from_tuple
+from utils import stancemap, stance_name_from_tuple
 from connections import db
 
 

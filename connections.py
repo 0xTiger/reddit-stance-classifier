@@ -4,7 +4,7 @@ from flask import Flask
 from dash import Dash, dcc
 from flask_sqlalchemy import SQLAlchemy
 import plotly.graph_objects as go
-from pushlib_utils import stancecolormap, stancemap
+from utils import stancecolormap, stancemap
 
 app = Flask(__name__)
 dashapp = Dash(__name__, server=app, url_base_pathname='/plots/')

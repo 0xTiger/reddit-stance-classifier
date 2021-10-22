@@ -1,6 +1,6 @@
 import csv
 from requests.exceptions import HTTPError
-from pushlib_utils import get_comment_data, get_user_data
+from utils import get_comment_data, get_user_data
 from tables import User, Comment, Stance
 from connections import db
 

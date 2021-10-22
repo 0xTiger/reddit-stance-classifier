@@ -1,7 +1,7 @@
 from flask import render_template, request, redirect, url_for
 from prediction import pred_lean
 from requests.exceptions import HTTPError
-from pushlib_utils import get_user_data, get_comment_data
+from utils import get_user_data, get_comment_data
 from tables import User, Comment, Prediction
 from connections import db, app
 
