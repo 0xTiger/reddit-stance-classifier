@@ -1,8 +1,8 @@
 # reddit-stance-classifier
-A Flask webapp & Python scripts for predicting reddit users' political leaning, using their comment history. The backend is a postgreSQL database which is queried using Flask_SQLAlchemy.
+A Flask webapp & Python scripts for predicting reddit users' political leaning, using their comment history. The backend is a postgreSQL database which is queried using Flask_SQLAlchemy. 
 
 
-### Usage
+## Usage
 View the [live webapp](https://www.reddit-lean.com)
 
 A model has been trained and pickled already in `models/ensemble.pkl`
@@ -10,7 +10,11 @@ If you wish to train your own model, first the postgres db must be set up and da
 
 `train_model.py` can then be run with various flags
 
-### Example instance of data
+
+## Model
+Currently the only features this model uses are the frequency of comments made in different subreddits. 
+A typical instance of data used for training looks like:
+## Example instance of data
 ```json
 "userMcUserFace01010101": {
   "stance": "libleft",
@@ -34,12 +38,22 @@ If you wish to train your own model, first the postgres db must be set up and da
   }
 }
 ```
+Here `"stance"` is the target data which we want to predict. This is encoded as a pair, mirroring the `"stance"`'s position on the political compass. The encoding is shown below:
+```python
+stancemap = {'libleft': (-1, -1), 
+        'libright': (-1, 1), 
+        'authleft': (1, -1), 
+        'authright': (1, 1),
+        'left': (0, -1),
+        'right': (0, 1),
+        'centrist': (0, 0),
+        'auth': (1, 0),
+        'lib': (-1, 0)}
+```
 
-In this example the `"subs"` from this instance of data would be encoded into a sparse array and passed into the model as features.
-The model that has subsequently been trained to predict `"stance"` would then make a prediction for this new instance of data.
+The target data are user flairs sampled from r/politicalcompassmemes. 
 
-
-### Conclusion
+## Conclusion
 
 As of writing a precision and recall of ~0.8 can be achieved on the unseen test set.
 It is important to note however, that there may be significant selection bias as all instances of data are from users of r/politicalcompassmemes.
