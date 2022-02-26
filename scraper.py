@@ -12,9 +12,10 @@ with open(nonexist_file) as f:
     reader = csv.reader(f)
     nonexist = {row[0] for row in reader}
 
+already_scraped = {u[0] for u in User.query.with_entities(User.name)}
 with open(data_file) as f:
     reader = csv.reader(f)
-    usernames = {row[2]: row[3] for row in reader if row[2] not in nonexist}
+    usernames = {row[2]: row[3] for row in reader if row[2] not in nonexist and row[2] not in already_scraped}
     total = len(usernames)
 
 nonexist_new = set() # Buffer-Like construction that we use to write non-existent users to csv
