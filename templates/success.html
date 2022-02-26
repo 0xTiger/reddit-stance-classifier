@@ -3,13 +3,19 @@
 <div>
   <table cellspacing="0" class="center">
     <tr>
-      <td><p>User:</p></td><td><p>{{user}}</p></td>
+      <td><p>User:</p></td><td><p>{{user.name}}</p></td>
     </tr>
     <tr>
-      <td><p>Stance: </p></td><td><p>{{stance_name}} <img src="{{ url_for('static', filename='../static/' + img) }}"></p></td>
+      <td><p>Stance: </p></td><td><p>{{user.prediction.stance_name()}} <img src="{{ url_for('static', filename='../static/' + user.prediction.img()) }}"></p></td>
     </tr>
     <tr>
-      <td><p>Confidence:</p><div class="tooltip"><i class="fas fa-info-circle"></i><span class="tooltiptext">The probability that the prediction is correct for the respective axis. This is not a measure of magnitude of position</span></div></td><td><p>{{h_confidence}} {{h_fullstance}}<br>{{v_confidence}} {{v_fullstance}}</p></td>
+      <td><p>Confidence:</p><div class="tooltip"><i class="fas fa-info-circle"></i>
+        <span class="tooltiptext">The probability that the prediction is correct for the respective axis. This is not a measure of magnitude of position</span>
+      </div></td>
+      <td>
+        <p>{{h_confidence}} {{user.prediction.stance_name(axis='h_binary')}}<br>
+        {{v_confidence}} {{user.prediction.stance_name(axis='v_binary')}}</p>
+      </td>
     </tr>
   </table>
 </div>

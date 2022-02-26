@@ -39,11 +39,7 @@ def success():
         db.session.commit()
 
         return render_template("success.html", 
-                                stance_name=user.prediction.stance_name(),
-                                user=user.name,
-                                img=user.prediction.img(),
-                                h_fullstance= user.prediction.stance_name(axis='h_binary'),
-                                v_fullstance= user.prediction.stance_name(axis='v_binary'),
+                                user=user,
                                 h_confidence=f'{abs(user.prediction.h_pos):.0%}',
                                 v_confidence=f'{abs(user.prediction.v_pos):.0%}')
 
