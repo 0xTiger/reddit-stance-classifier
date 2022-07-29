@@ -1,5 +1,6 @@
 {% extends "home.html" %}
 {% block info %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <div>
   <table cellspacing="0" class="center">
     <tr>
@@ -9,14 +10,91 @@
       <td><p>Stance: </p></td><td><p>{{user.prediction.stance_name()}} <img src="{{ url_for('static', filename='../static/' + user.prediction.img()) }}"></p></td>
     </tr>
     <tr>
-      <td><p>Confidence:</p><div class="tooltip"><i class="fas fa-info-circle"></i>
+      <td><p>Compass<br>Position:</p><div class="tooltip"><i class="fas fa-info-circle"></i>
         <span class="tooltiptext">The probability that the prediction is correct for the respective axis. This is not a measure of magnitude of position</span>
       </div></td>
       <td>
-        <p>{{h_confidence}} {{user.prediction.stance_name(axis='h_binary')}}<br>
-        {{v_confidence}} {{user.prediction.stance_name(axis='v_binary')}}</p>
+        <canvas width=200 height=200 id="CompassChart"></canvas>
       </td>
     </tr>
   </table>
 </div>
+
+<script>
+  
+  const h = {{user.prediction.h_pos | tojson }};
+  const v = {{user.prediction.v_pos | tojson }};
+
+  var c = 'rgb(132, 99, 255)';
+  if (h < 0) {
+    if (v < 0) {
+      c = 'rgb(99, 255, 132)';
+    } else {
+      c = 'rgb(255, 99, 132)';
+    }
+  } else {
+    if (v < 0) {
+      c = 'rgb(255, 255, 10)';
+    } else {
+      c = 'rgb(132, 99, 255)';
+    }
+  }
+  const data = {
+    datasets: [{
+      label: 'My First dataset',
+      backgroundColor: c,
+      borderColor: c,
+      data: [{x: h, 
+              y: v}],
+      pointRadius: 5,
+    }]
+    
+  };
+
+  const scatterArbitraryLine = {
+    id: 'scatterArbitraryLine',
+    beforeDatasetsDraw(chart, args, pluginOptions){
+      const { ctx, chartArea: {top, bottom, left, right, width, height},
+        scales: {x, y} } = chart;
+      ctx.save();
+      lines(0, -1, 0, 1);
+      lines(-1, 0, 1, 0);
+
+      function lines(x1, y1, x2, y2){
+        ctx.beginPath();
+        ctx.strokeStyle = 'rgb(0, 0, 0)'
+        ctx.lineWidth = 3;
+        ctx.moveTo(x.getPixelForValue(x1), y.getPixelForValue(y1))
+        ctx.lineTo(x.getPixelForValue(x2), y.getPixelForValue(y2))
+        ctx.stroke();
+        ctx.closePath();
+        ctx.restore();
+    }
+    }
+  }
+
+  const config = {
+    type: 'scatter',
+    data: data,
+    options: {
+      scales: {
+        x: {min: -1, max: 1, ticks: {stepSize: 0.5}},
+        y: {min: -1, max: 1, ticks: {stepSize: 0.5}}
+      },
+      plugins: {
+        legend: {
+          display: false
+        },
+      }
+    },
+    plugins: [scatterArbitraryLine]
+  };
+</script>
+<script>
+  const CompassChart = new Chart(
+    document.getElementById('CompassChart'),
+    config,
+  );
+</script>
+
 {% endblock %}
