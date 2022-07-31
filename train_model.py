@@ -1,13 +1,11 @@
+import argparse
+from timeit import default_timer as timer
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import joblib
-import argparse
-def warn(*args, **kwargs):
-    pass
-import warnings
-warnings.warn = warn
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.feature_selection import SelectKBest
 from sklearn.pipeline import Pipeline
@@ -16,9 +14,9 @@ from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict
 from sklearn.metrics import confusion_matrix, precision_score, recall_score
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor
+
 from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub, multi_f_classif
 from utils import stancecolormap, stancemap, stance_name_from_tuple
-from timeit import default_timer as timer
 
 
 parser = argparse.ArgumentParser()

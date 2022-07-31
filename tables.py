@@ -91,6 +91,7 @@ class Stance(db.Model):
     def from_str(cls, username, stance_name):
         return cls(username, *stancemap[stance_name])
 
+
 class Comment(db.Model):
     id = db.Column(db.String, primary_key=True)
     author = db.Column(db.String, db.ForeignKey('user.name'))
