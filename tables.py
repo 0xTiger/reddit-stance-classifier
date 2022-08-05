@@ -123,4 +123,23 @@ class Comment(db.Model):
         self.created_utc = created_utc
         self.controversiality = controversiality
         self.total_awards_received = total_awards_received
- 
+
+
+class Traffic(db.Model):
+    id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
+    ip = db.Column(db.String)
+    os = db.Column(db.String)
+    browser = db.Column(db.String)
+    session_id = db.Column(db.String)
+    path = db.Column(db.String)
+    method = db.Column(db.String)
+    timestamp = db.Column(db.DateTime)
+
+    def __init__(self, ip, os, browser, session_id, path, method, timestamp):
+        self.ip = ip
+        self.os = os
+        self.browser = browser
+        self.session_id = session_id
+        self.path = path
+        self.method = method
+        self.timestamp = timestamp

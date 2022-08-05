@@ -7,23 +7,28 @@ from flask import render_template, request, redirect, url_for, session
 
 from prediction import pred_lean
 from utils import get_user_data, get_comment_data
-from tables import User, Comment, Prediction
+from tables import User, Comment, Prediction, Traffic
 from connections import db, app
     
 
 def get_analytics_data():
     userInfo = httpagentparser.detect(request.headers.get('User-Agent'))
-    userOS = userInfo['platform']['name']
-    userBrowser = userInfo['browser']['name']
-    userIP = request.remote_addr
     time = datetime.now()
     if 'user' not in session:
-        seed = f'{time}{userIP}'
+        seed = f'{time}{request.remote_addr}'
         session['user'] = hashlib.md5(seed.encode('utf-8')).hexdigest()
 
-    sessionID = session['user']
-    data = [userIP, userOS, userBrowser, sessionID, request.path, request.method, time]
-    print(data)
+    reqlog = Traffic(
+        ip=request.remote_addr,
+        os=userInfo['platform']['name'],
+        browser=userInfo['browser']['name'],
+        session_id=session['user'],
+        path=request.path,
+        method=request.method,
+        timestamp=time,
+    )
+    db.session.add(reqlog)
+    db.session.commit()
 
 
 @app.route("/")
