@@ -1,17 +1,40 @@
-from flask import render_template, request, redirect, url_for
-from prediction import pred_lean
+from datetime import datetime
+import hashlib
+
+import httpagentparser
 from requests.exceptions import HTTPError
+from flask import render_template, request, redirect, url_for, session
+
+from prediction import pred_lean
 from utils import get_user_data, get_comment_data
 from tables import User, Comment, Prediction
 from connections import db, app
+    
+
+def get_analytics_data():
+    userInfo = httpagentparser.detect(request.headers.get('User-Agent'))
+    userOS = userInfo['platform']['name']
+    userBrowser = userInfo['browser']['name']
+    userIP = request.remote_addr
+    time = datetime.now()
+    if 'user' not in session:
+        seed = f'{time}{userIP}'
+        session['user'] = hashlib.md5(seed.encode('utf-8')).hexdigest()
+
+    sessionID = session['user']
+    data = [userIP, userOS, userBrowser, sessionID, request.path, request.method, time]
+    print(data)
+
 
 @app.route("/")
 def index():
+    get_analytics_data()
     return render_template("home.html")
 
 
 @app.route("/pred", methods=['POST', 'GET'])
 def success():
+    get_analytics_data()
     if request.method == 'POST':
         username = request.form['username']
         if not username:
@@ -49,6 +72,7 @@ def success():
 
 @app.route("/about")
 def about():
+    get_analytics_data()
     return render_template("about.html")
 
 
