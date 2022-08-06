@@ -1,4 +1,5 @@
-from datetime import datetime
+from collections import Counter
+from datetime import datetime, timedelta
 import hashlib
 
 import httpagentparser
@@ -80,6 +81,13 @@ def about():
     get_analytics_data()
     return render_template("about.html")
 
+@app.route("/traffic")
+def traffic():
+    traffics = Traffic.query.where(Traffic.timestamp > datetime.now() - timedelta(days=1)).all()
+    hourly_counts = Counter(traffic.timestamp.hour for traffic in traffics)
+    traffic_frequency = [hourly_counts.get(hour, 0) for hour in range(24)]
+    return render_template("traffic.html", 
+        traffic_frequency=traffic_frequency)
 
 if __name__ == '__main__':
     app.debug = True
