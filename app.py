@@ -81,13 +81,39 @@ def about():
     get_analytics_data()
     return render_template("about.html")
 
+
+def binned_counts(increment, value):
+    since = datetime.now() - value * increment
+    traffics = Traffic.query.with_entities(Traffic.timestamp).where(Traffic.timestamp > since).all()
+    traffics = sorted(row[0] for row in traffics)
+    
+    incremental_traffic = [0]*value
+    increment_idx = 0
+    count = 0
+    for ts in traffics:
+        while ts > increment * increment_idx + since:
+            incremental_traffic[increment_idx] = count
+            count = 0
+            increment_idx += 1
+        count += 1
+    return incremental_traffic
+
+
 @app.route("/traffic")
 def traffic():
-    traffics = Traffic.query.where(Traffic.timestamp > datetime.now() - timedelta(days=1)).all()
-    hourly_counts = Counter(traffic.timestamp.hour for traffic in traffics)
-    traffic_frequency = [hourly_counts.get(hour, 0) for hour in range(24)]
+    since = request.args.get('since', '24h')
+    value, increment = int(since[:-1]), since[-1:]
+    increment = {
+        'd': timedelta(days=1),
+        'h': timedelta(hours=1),
+        'm': timedelta(minutes=1),
+        's': timedelta(seconds=1),
+    }.get(increment, 'h')
+    
+    traffic_frequency = binned_counts(increment, value)
     return render_template("traffic.html", 
-        traffic_frequency=traffic_frequency)
+        traffic_frequency=traffic_frequency,
+        traffic_labels=[n for n in range(-len(traffic_frequency), 0)])
 
 if __name__ == '__main__':
     app.debug = True

@@ -22,6 +22,8 @@ nonexist_new = set() # Buffer-Like construction that we use to write non-existen
 for i, (username, stance_name) in enumerate(usernames.items()):
     if stance_name == 'libright2':
         stance_name = 'libright'
+    if stance_name == 'CENTG':
+        stance_name = 'centrist'
     if stance_name != 'None' and not User.from_name(username):
         try:
             user_data = get_user_data(username)
