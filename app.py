@@ -10,7 +10,13 @@ from prediction import pred_lean
 from utils import get_user_data, get_comment_data
 from tables import User, Comment, Prediction, Traffic
 from connections import db, app
-    
+
+
+def get_real_ip(r) -> str:
+    return (r.environ['HTTP_X_FORWARDED_FOR'] 
+        if r.environ.get('HTTP_X_FORWARDED_FOR') is not None
+        else r.environ['REMOTE_ADDR'])
+
 
 def get_analytics_data():
     userInfo = httpagentparser.detect(request.headers.get('User-Agent'))
@@ -19,8 +25,9 @@ def get_analytics_data():
         seed = f'{time}{request.remote_addr}'
         session['user'] = hashlib.md5(seed.encode('utf-8')).hexdigest()
 
+
     reqlog = Traffic(
-        ip=request.remote_addr,
+        ip=get_real_ip(request),
         os=userInfo['platform']['name'],
         browser=userInfo['browser']['name'],
         session_id=session['user'],
