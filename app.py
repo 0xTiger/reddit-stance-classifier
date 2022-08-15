@@ -19,7 +19,7 @@ def get_real_ip(r) -> str:
 
 
 def get_analytics_data():
-    userInfo = httpagentparser.detect(request.headers.get('User-Agent'))
+    userInfo = httpagentparser.detect(request.headers.get('User-Agent'), fill_none=True)
     time = datetime.now()
     if 'user' not in session:
         seed = f'{time}{request.remote_addr}'

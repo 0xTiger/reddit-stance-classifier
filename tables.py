@@ -128,8 +128,8 @@ class Comment(db.Model):
 class Traffic(db.Model):
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     ip = db.Column(db.String)
-    os = db.Column(db.String)
-    browser = db.Column(db.String)
+    os = db.Column(db.String, nullable=True)
+    browser = db.Column(db.String, nullable=True)
     session_id = db.Column(db.String)
     path = db.Column(db.String)
     method = db.Column(db.String)
