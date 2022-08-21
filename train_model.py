@@ -11,7 +11,7 @@ from sklearn.feature_selection import SelectKBest
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict
-from sklearn.metrics import confusion_matrix, precision_score, recall_score
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, mean_absolute_error
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
@@ -26,12 +26,14 @@ args = parser.parse_args()
 
 forest_clf = RandomForestRegressor(min_samples_leaf=5, random_state=42)
 multi_clf = MultiOutputRegressor(forest_clf)
-full_pipeline = Pipeline([('filterer', DictFilterer(exclude_u_sub)),
-                            ('vectorizer', DictVectorizer(sparse=True)),
-                            ('selectKBest', SelectKBest(multi_f_classif, k=1000)),
-                            ('scaler', StandardScaler(with_mean=False)),
-                            ('framer', ToSparseDF()),
-                            ('clf', multi_clf)])
+full_pipeline = Pipeline([
+    ('filterer', DictFilterer(exclude_u_sub)),
+    ('vectorizer', DictVectorizer(sparse=True)),
+    ('selectKBest', SelectKBest(multi_f_classif, k=1000)),
+    ('scaler', StandardScaler(with_mean=False)),
+    ('framer', ToSparseDF()),
+    ('clf', multi_clf)
+])
 
 if __name__ == '__main__':
     from tables import Comment, User, db
@@ -65,6 +67,7 @@ if __name__ == '__main__':
         y_pred = cross_val_predict(full_pipeline, X_train, y_train, cv=5, n_jobs=-1)
         end = timer()
         print(f'Trained in {end - start}')
+        print(f'MAE: {mean_absolute_error(y_train, y_pred)}')
         stances = sorted(stancemap.keys())
 
         actual_stances, pred_stances, conf_matrices, precision_scores, recall_scores = dict(), dict(), dict(), dict(), dict()
@@ -103,9 +106,13 @@ if __name__ == '__main__':
         
 
         fig2, ax2 = plt.subplots()
-        ax2.scatter(y_pred[:, 1], y_pred[:, 0],
-                    color=[stancecolormap.get(stance) for stance in actual_stances['both']],
-                    s=5, alpha=0.5)
+        ax2.scatter(
+            y_pred[:, 1],
+            y_pred[:, 0],
+            color=[stancecolormap.get(stance) for stance in actual_stances['both']],
+            s=5,
+            alpha=0.5
+        )
         ax2.axhline(0, color='k', linestyle='--')
         ax2.axvline(0, color='k', linestyle='--')
         ax2.set_xlabel('Left/Right')
