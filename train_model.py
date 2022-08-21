@@ -36,23 +36,30 @@ full_pipeline = Pipeline([
 ])
 
 if __name__ == '__main__':
-    from tables import Comment, User, db
+    from tables import Comment, Stance, db
     from collections import defaultdict
 
-    comment_groups = Comment.query.with_entities(Comment.author, Comment.subreddit, db.func.count(Comment.subreddit))\
-                            .group_by(Comment.author, Comment.subreddit)\
-                            .all()
+    comment_groups = (
+        Comment.query
+        .with_entities(Comment.author, Comment.subreddit, db.func.count(Comment.subreddit))
+        .group_by(Comment.author, Comment.subreddit)
+        .all()
+    )
+    stances = Stance.query.all()
 
+    stances_dict = dict()
     subreddit_counts = defaultdict(dict)
     for author, subreddit, count in comment_groups:
         subreddit_counts[author][subreddit] = count
+    for stance in stances:
+        stances_dict[stance.name] = (stance.v_pos, stance.h_pos)
 
     features, labels = [], []
     for author, subs in subreddit_counts.items():
-        user = User.from_name(author)
-        if user and user.stance:
+        label = stances_dict.get(author)
+        if label:
             features.append(subs)
-            labels.append((user.stance.v_pos, user.stance.h_pos))
+            labels.append(label)
 
     labels = np.array(labels)
     features = pd.Series(features)
