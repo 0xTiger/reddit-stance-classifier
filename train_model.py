@@ -72,6 +72,7 @@ if __name__ == '__main__':
     if not args.noval:
         start = timer()
         y_pred = cross_val_predict(full_pipeline, X_train, y_train, cv=5, n_jobs=-1)
+        y_pred = y_pred.clip(-1, 1)
         end = timer()
         print(f'Trained in {end - start}')
         print(f'MAE: {mean_absolute_error(y_train, y_pred)}')
