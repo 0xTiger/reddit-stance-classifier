@@ -88,4 +88,4 @@ for cluster in range(clusters.max()):
 ax.set_xticks([])
 ax.set_yticks([])
 ax.set_title('Map of Reddit (Political)\n', fontsize=64)
-fig.savefig('test.png')
+fig.savefig('map_imgs/out.png')
