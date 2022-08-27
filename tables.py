@@ -143,3 +143,24 @@ class Traffic(db.Model):
         self.path = path
         self.method = method
         self.timestamp = timestamp
+
+
+def create_subreddit_view():
+    query = """
+        CREATE MATERIALIZED VIEW subreddit_stance
+        AS
+        SELECT comment.subreddit, stance.h_pos, stance.v_pos, COUNT(comment)
+
+        FROM comment
+        JOIN stance ON stance.name = comment.author
+        GROUP BY comment.subreddit, stance.h_pos, stance.v_pos
+        WITH DATA
+        """
+    db.engine.execute(query)
+
+
+def refresh_subreddit_view():
+    query = """
+        REFRESH MATERIALIZED VIEW subreddit_stance
+        """
+    db.engine.execute(query)

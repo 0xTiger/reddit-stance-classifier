@@ -1,5 +1,6 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta
+from itertools import groupby
 import hashlib
 
 import httpagentparser
@@ -7,7 +8,13 @@ from requests.exceptions import HTTPError
 from flask import render_template, request, redirect, url_for, session
 
 from prediction import pred_lean
-from utils import get_user_data, get_comment_data
+from utils import (
+    stance_name_from_tuple,
+    nested_list_to_table_html,
+    get_user_data,
+    get_comment_data,
+    stancemap
+)
 from tables import User, Comment, Prediction, Traffic
 from connections import db, app
 
@@ -121,6 +128,30 @@ def traffic():
     return render_template("traffic.html", 
         traffic_frequency=traffic_frequency,
         traffic_labels=[n for n in range(-len(traffic_frequency), 0)])
+
+
+@app.route("/subreddits")
+def subreddits():
+    get_analytics_data()
+    header = '</th><th>'.join(stancemap.keys())
+    header = f'<thead><tr><th>Subreddit</th><th>{header}</th></tr></thead>'
+    query = """
+    SELECT * 
+    FROM subreddit_stance
+    WHERE subreddit_stance.subreddit = any(
+        SELECT subreddit_stance.subreddit
+        FROM subreddit_stance
+        GROUP BY subreddit_stance.subreddit
+        ORDER BY SUM(count) DESC
+        LIMIT 100
+    )
+    """
+    results = db.engine.execute(query)
+    results = {name: defaultdict(int, {stance_name_from_tuple((y[2], y[1])): y[3] for y in group})
+     for name, group in groupby(results, key=lambda x: x[0])}
+    results = [[sub] + [result[stance] for stance in stancemap.keys()] for sub, result in results.items()]
+    return render_template("subreddits.html", table=header + nested_list_to_table_html(results))
+
 
 if __name__ == '__main__':
     app.debug = True
