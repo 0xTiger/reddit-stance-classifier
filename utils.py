@@ -67,8 +67,8 @@ def nested_list_to_table_html(nestedlist):
     tablestr = '<tbody>'
     for sublist in nestedlist:
         tablestr += '<tr>'
-        for item in sublist:
-            tablestr += f'<td>{item}</td>'
+        for i, item in enumerate(sublist):
+            tablestr += f'<td {"id=mainbody" if i != 0 else ""}>{item}</td>'
         tablestr += '</tr>'
     tablestr += '</tbody>'
     return tablestr

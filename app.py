@@ -1,4 +1,4 @@
-from collections import Counter, defaultdict
+from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
 import hashlib
@@ -13,9 +13,10 @@ from utils import (
     nested_list_to_table_html,
     get_user_data,
     get_comment_data,
-    stancemap
+    stancemap,
+    stancecolormap
 )
-from tables import User, Comment, Prediction, Traffic
+from tables import User, Comment, Traffic
 from connections import db, app
 
 
@@ -133,8 +134,7 @@ def traffic():
 @app.route("/subreddits")
 def subreddits():
     get_analytics_data()
-    header = '</th><th>'.join(stancemap.keys())
-    header = f'<thead><tr><th>Subreddit</th><th>{header}</th></tr></thead>'
+    header = f'<thead><tr><th>Subreddit</th><th>Chart</th></tr></thead>'
     query = """
     SELECT * 
     FROM subreddit_stance
@@ -149,7 +149,10 @@ def subreddits():
     results = db.engine.execute(query)
     results = {name: defaultdict(int, {stance_name_from_tuple((y[2], y[1])): y[3] for y in group})
      for name, group in groupby(results, key=lambda x: x[0])}
-    results = [[sub] + [result[stance] for stance in stancemap.keys()] for sub, result in results.items()]
+    # results = [[sub] + [f'<p style="color: {stancecolormap[stance]}">{result[stance] / sum(result.values()):.0%}</p>' for stance in stancemap.keys()] for sub, result in results.items()]
+    def div_from_stance_pct(pct, stance):
+        return f"<div style='background-color:{stancecolormap[stance]}; width:{pct * 100}%; float:left;'>&nbsp;</div>"
+    results = [[sub] + [''.join(div_from_stance_pct(result[stance] / sum(result.values()), stance) for stance in stancemap.keys())] for sub, result in results.items()]
     return render_template("subreddits.html", table=header + nested_list_to_table_html(results))
 
 

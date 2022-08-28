@@ -180,6 +180,16 @@ div#loading {
 table#subreddits {
   margin: auto;
 }
+table#subreddits td {
+  margin: 0px;
+  padding: 0px;
+}
+table#subreddits td#mainbody {
+  width: 100vw;
+  margin: 0px;
+  padding: 0px;
+}
+
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
