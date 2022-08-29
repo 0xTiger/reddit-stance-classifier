@@ -134,7 +134,9 @@ def traffic():
 @app.route("/subreddits")
 def subreddits():
     get_analytics_data()
-    header = f'<thead><tr><th>Subreddit</th><th>Chart</th></tr></thead>'
+    stance_legend = ''.join(f'<div style="background-color:{colour}">{stance}</div>' for stance, colour in stancecolormap.items())
+    tooltip = f'<div class="tooltip"><i class="fas fa-info-circle"></i><span class="tooltiptext">{stance_legend}</span></div>'
+    header = f'<thead><tr><th>Subreddit</th><th>{tooltip} Demographics </th></tr></thead>'
     query = """
     SELECT * 
     FROM subreddit_stance
@@ -151,8 +153,10 @@ def subreddits():
      for name, group in groupby(results, key=lambda x: x[0])}
     # results = [[sub] + [f'<p style="color: {stancecolormap[stance]}">{result[stance] / sum(result.values()):.0%}</p>' for stance in stancemap.keys()] for sub, result in results.items()]
     def div_from_stance_pct(pct, stance):
+        #https://stackoverflow.com/a/34074407/19264346 for no width content
         return f"<div style='background-color:{stancecolormap[stance]}; width:{pct * 100}%; float:left;'>&nbsp;</div>"
-    results = [[sub] + [''.join(div_from_stance_pct(result[stance] / sum(result.values()), stance) for stance in stancemap.keys())] for sub, result in results.items()]
+    sorted_results = sorted(results.items(), key=lambda x: sum(x[1].values()), reverse=True)
+    results = [[sub] + [''.join(div_from_stance_pct(result[stance] / sum(result.values()), stance) for stance in stancemap.keys())] for sub, result in sorted_results]
     return render_template("subreddits.html", table=header + nested_list_to_table_html(results))
 
 
