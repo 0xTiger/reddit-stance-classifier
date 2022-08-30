@@ -1,7 +1,24 @@
 {% extends "index.html" %}
 
 {% block content %}
-<table id="subreddits">
-    {{table | safe}}
-</table>
+<div class="container">
+    <script type="text/javascript">// <![CDATA[
+          function loading(){
+              $("#loading").show();
+              $("#content").hide();
+          }
+  // ]]></script>
+    <form action="subreddits" method="post" id="find_subreddit" onsubmit="loading()">
+      <div class="input-group">
+        <input type="text" name="subreddit" placeholder="subreddit" autocapitalize="off" autocorrect="off" autocomplete="off" class="form-control search-bar">
+        <span class="input-group-btn"><button type="submit" class="btn" form="find_subreddit" value="Submit">Search</button></span>
+      </div>
+    </form>
+    <div id="loading"></div>
+    <div id="content">
+      <table id="subreddits">
+          {{ table | safe}}
+      </table>
+    </div>
+</div>
 {% endblock %}

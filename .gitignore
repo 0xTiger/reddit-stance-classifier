@@ -4,4 +4,5 @@ venv
 vars
 .vscode
 nonexist.csv
+labels.csv
 map_imgs

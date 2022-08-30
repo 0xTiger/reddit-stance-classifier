@@ -46,7 +46,7 @@ a, a:hover {
   font-size: 0;
 }
 
-.username-input {
+.search-bar {
   font-size: 1.1rem !important;
   padding: 0.8rem 1rem !important;
   background: rgba(0, 10, 25, 0.3);

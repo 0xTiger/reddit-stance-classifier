@@ -131,23 +131,26 @@ def traffic():
         traffic_labels=[n for n in range(-len(traffic_frequency), 0)])
 
 
-@app.route("/subreddits")
+@app.route("/subreddits", methods=['POST', 'GET'])
 def subreddits():
     get_analytics_data()
-    stance_legend = ''.join(f'<div style="background-color:{colour}">{stance}</div>' for stance, colour in stancecolormap.items())
-    tooltip = f'<div class="tooltip"><i class="fas fa-info-circle"></i><span class="tooltiptext">{stance_legend}</span></div>'
-    header = f'<thead><tr><th>Subreddit</th><th>{tooltip} Demographics </th></tr></thead>'
+    if request.method == 'POST':
+        subreddit = request.form['subreddit']
+    else:
+        subreddit = ''
     query = """
     SELECT * 
     FROM subreddit_stance
     WHERE subreddit_stance.subreddit = any(
         SELECT subreddit_stance.subreddit
         FROM subreddit_stance
+        WHERE subreddit_stance.subreddit ILIKE '%%{}%%'
         GROUP BY subreddit_stance.subreddit
         ORDER BY SUM(count) DESC
         LIMIT 100
     )
-    """
+    """.format(subreddit)
+    print(query)
     results = db.engine.execute(query)
     results = {name: defaultdict(int, {stance_name_from_tuple((y[2], y[1])): y[3] for y in group})
      for name, group in groupby(results, key=lambda x: x[0])}
@@ -155,8 +158,14 @@ def subreddits():
     def div_from_stance_pct(pct, stance):
         #https://stackoverflow.com/a/34074407/19264346 for no width content
         return f"<div style='background-color:{stancecolormap[stance]}; width:{pct * 100}%; float:left;'>&nbsp;</div>"
+    def div_from_sub(sub):
+        return f'<a href="https://reddit.com/r/{sub}" target="_blank">{sub}</a>'
     sorted_results = sorted(results.items(), key=lambda x: sum(x[1].values()), reverse=True)
-    results = [[sub] + [''.join(div_from_stance_pct(result[stance] / sum(result.values()), stance) for stance in stancemap.keys())] for sub, result in sorted_results]
+    
+    results = [[div_from_sub(sub)] + [''.join(div_from_stance_pct(result[stance] / sum(result.values()), stance) for stance in stancemap.keys())] for sub, result in sorted_results]
+    stance_legend = ''.join(f'<div style="background-color:{colour}">{stance}</div>' for stance, colour in stancecolormap.items())
+    tooltip = f'<div class="tooltip"><i class="fas fa-info-circle"></i><span class="tooltiptext">{stance_legend}</span></div>'
+    header = f'<thead><tr><th>Subreddit</th><th>{tooltip} Demographics </th></tr></thead>'
     return render_template("subreddits.html", table=header + nested_list_to_table_html(results))
 
 
