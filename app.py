@@ -106,11 +106,12 @@ def binned_counts(increment, value):
     increment_idx = 0
     count = 0
     for ts in traffics:
-        while ts > increment * increment_idx + since:
+        while ts > increment * (increment_idx + 1) + since:
             incremental_traffic[increment_idx] = count
             count = 0
             increment_idx += 1
         count += 1
+    incremental_traffic[increment_idx] = count
     return incremental_traffic
 
 
