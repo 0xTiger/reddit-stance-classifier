@@ -61,3 +61,14 @@ stancemap = {'libleft': (-1, -1),
         'lib': (-1, 0)}
 
 stancemap_inv = {v:k for k,v in stancemap.items()}
+
+
+def nested_list_to_table_html(nestedlist):
+    tablestr = '<tbody>'
+    for sublist in nestedlist:
+        tablestr += '<tr>'
+        for i, item in enumerate(sublist):
+            tablestr += f'<td {"id=mainbody" if i != 0 else ""}>{item}</td>'
+        tablestr += '</tr>'
+    tablestr += '</tbody>'
+    return tablestr

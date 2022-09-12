@@ -1,5 +1,6 @@
-from collections import Counter
+from collections import defaultdict
 from datetime import datetime, timedelta
+from itertools import groupby
 import hashlib
 
 import httpagentparser
@@ -7,8 +8,15 @@ from requests.exceptions import HTTPError
 from flask import render_template, request, redirect, url_for, session
 
 from prediction import pred_lean
-from utils import get_user_data, get_comment_data
-from tables import User, Comment, Prediction, Traffic
+from utils import (
+    stance_name_from_tuple,
+    nested_list_to_table_html,
+    get_user_data,
+    get_comment_data,
+    stancemap,
+    stancecolormap
+)
+from tables import User, Comment, Traffic
 from connections import db, app
 
 
@@ -98,11 +106,12 @@ def binned_counts(increment, value):
     increment_idx = 0
     count = 0
     for ts in traffics:
-        while ts > increment * increment_idx + since:
+        while ts > increment * (increment_idx + 1) + since:
             incremental_traffic[increment_idx] = count
             count = 0
             increment_idx += 1
         count += 1
+    incremental_traffic[increment_idx] = count
     return incremental_traffic
 
 
@@ -121,6 +130,45 @@ def traffic():
     return render_template("traffic.html", 
         traffic_frequency=traffic_frequency,
         traffic_labels=[n for n in range(-len(traffic_frequency), 0)])
+
+
+@app.route("/subreddits", methods=['POST', 'GET'])
+def subreddits():
+    get_analytics_data()
+    if request.method == 'POST':
+        subreddit = request.form['subreddit']
+    else:
+        subreddit = ''
+    query = """
+    SELECT * 
+    FROM subreddit_stance
+    WHERE subreddit_stance.subreddit = any(
+        SELECT subreddit_stance.subreddit
+        FROM subreddit_stance
+        WHERE subreddit_stance.subreddit ILIKE '%%{}%%'
+        GROUP BY subreddit_stance.subreddit
+        ORDER BY SUM(count) DESC
+        LIMIT 100
+    )
+    """.format(subreddit)
+    print(query)
+    results = db.engine.execute(query)
+    results = {name: defaultdict(int, {stance_name_from_tuple((y[2], y[1])): y[3] for y in group})
+     for name, group in groupby(results, key=lambda x: x[0])}
+    # results = [[sub] + [f'<p style="color: {stancecolormap[stance]}">{result[stance] / sum(result.values()):.0%}</p>' for stance in stancemap.keys()] for sub, result in results.items()]
+    def div_from_stance_pct(pct, stance):
+        #https://stackoverflow.com/a/34074407/19264346 for no width content
+        return f"<div style='background-color:{stancecolormap[stance]}; width:{pct * 100}%; float:left;'>&nbsp;</div>"
+    def div_from_sub(sub):
+        return f'<a href="https://reddit.com/r/{sub}" target="_blank">{sub}</a>'
+    sorted_results = sorted(results.items(), key=lambda x: sum(x[1].values()), reverse=True)
+    
+    results = [[div_from_sub(sub)] + [''.join(div_from_stance_pct(result[stance] / sum(result.values()), stance) for stance in stancemap.keys())] for sub, result in sorted_results]
+    stance_legend = ''.join(f'<div style="background-color:{colour}">{stance}</div>' for stance, colour in stancecolormap.items())
+    tooltip = f'<div class="tooltip"><i class="fas fa-info-circle"></i><span class="tooltiptext">{stance_legend}</span></div>'
+    header = f'<thead><tr><th>Subreddit</th><th>{tooltip} Demographics </th></tr></thead>'
+    return render_template("subreddits.html", table=header + nested_list_to_table_html(results))
+
 
 if __name__ == '__main__':
     app.debug = True

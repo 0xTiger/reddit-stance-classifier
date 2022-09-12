@@ -46,7 +46,7 @@ a, a:hover {
   font-size: 0;
 }
 
-.username-input {
+.search-bar {
   font-size: 1.1rem !important;
   padding: 0.8rem 1rem !important;
   background: rgba(0, 10, 25, 0.3);
@@ -71,9 +71,7 @@ a, a:hover {
 /* Tooltip text */
 .tooltip .tooltiptext {
   visibility: hidden;
-  width: 240px;
   background-color: rgba(0, 10, 25, 0.3);
-  color: #fff;
   text-align: center;
   padding: 5px 0;
   border-radius: 6px;
@@ -175,6 +173,19 @@ div#loading {
   height: 50px;
   animation: spin 2s linear infinite;
   text-align: center;
+}
+
+table#subreddits {
+  margin: auto;
+}
+table#subreddits td {
+  margin: 0px;
+  padding: 0px;
+}
+table#subreddits td#mainbody {
+  width: 100vw;
+  margin: 0px;
+  padding: 0px;
 }
 
 @keyframes spin {
