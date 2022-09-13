@@ -151,7 +151,6 @@ def subreddits():
         LIMIT 100
     )
     """.format(subreddit)
-    print(query)
     results = db.engine.execute(query)
     results = {name: defaultdict(int, {stance_name_from_tuple((y[2], y[1])): y[3] for y in group})
      for name, group in groupby(results, key=lambda x: x[0])}
