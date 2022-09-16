@@ -82,10 +82,12 @@ def success():
             user.prediction = pred_lean(user)
         db.session.commit()
 
-        return render_template("success.html", 
-                                user=user,
-                                h_confidence=f'{abs(user.prediction.h_pos):.0%}',
-                                v_confidence=f'{abs(user.prediction.v_pos):.0%}')
+        return render_template(
+            "success.html",
+            user=user,
+            h_confidence=f'{abs(user.prediction.h_pos):.0%}',
+            v_confidence=f'{abs(user.prediction.v_pos):.0%}'
+        )
 
     elif request.method == 'GET':
         return redirect(url_for('index'))
