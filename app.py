@@ -147,13 +147,13 @@ def subreddits():
     WHERE subreddit_stance.subreddit = any(
         SELECT subreddit_stance.subreddit
         FROM subreddit_stance
-        WHERE subreddit_stance.subreddit ILIKE '%%{}%%'
+        WHERE subreddit_stance.subreddit ILIKE %s
         GROUP BY subreddit_stance.subreddit
         ORDER BY SUM(count) DESC
         LIMIT 100
     )
-    """.format(subreddit)
-    results = db.engine.execute(query)
+    """
+    results = db.engine.execute(query, f'%%{subreddit}%%')
     results = {name: defaultdict(int, {stance_name_from_tuple((y[2], y[1])): y[3] for y in group})
      for name, group in groupby(results, key=lambda x: x[0])}
     # results = [[sub] + [f'<p style="color: {stancecolormap[stance]}">{result[stance] / sum(result.values()):.0%}</p>' for stance in stancemap.keys()] for sub, result in results.items()]
@@ -172,5 +172,4 @@ def subreddits():
 
 
 if __name__ == '__main__':
-    app.debug = True
     app.run()

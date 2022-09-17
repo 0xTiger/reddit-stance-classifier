@@ -1,5 +1,5 @@
 # reddit-stance-classifier
-A Flask webapp & Python scripts for predicting reddit users' political leaning, using their comment history. The backend is a postgreSQL database which is queried using Flask_SQLAlchemy. 
+A Flask webapp & Python scripts for predicting reddit users' political leaning, using their comment history. The backend is Flask with a PostgreSQL database which is queried using SQLAlchemy. 
 
 
 ## Usage
@@ -40,15 +40,17 @@ A typical instance of data used for training looks like:
 ```
 Here `"stance"` is the target data which we want to predict. This is encoded as a pair, mirroring the `"stance"`'s position on the political compass. The encoding is shown below:
 ```python
-stancemap = {'libleft': (-1, -1), 
-        'libright': (-1, 1), 
-        'authleft': (1, -1), 
-        'authright': (1, 1),
-        'left': (0, -1),
-        'right': (0, 1),
-        'centrist': (0, 0),
-        'auth': (1, 0),
-        'lib': (-1, 0)}
+stancemap = {
+  'libleft': (-1, -1), 
+  'libright': (-1, 1), 
+  'authleft': (1, -1), 
+  'authright': (1, 1),
+  'left': (0, -1),
+  'right': (0, 1),
+  'centrist': (0, 0),
+  'auth': (1, 0),
+  'lib': (-1, 0)
+}
 ```
 
 The target data are user flairs sampled from r/politicalcompassmemes. 
