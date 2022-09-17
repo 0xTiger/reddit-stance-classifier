@@ -7,16 +7,11 @@
 
 <script>
   
-  const freq = {{traffic_frequency | tojson }};
+  const datasets = {{traffic_frequency | tojson }};
   const labels = {{traffic_labels | tojson }};
   const data = {
     labels: labels,
-    datasets: [{
-      label: 'Traffic Frequency',
-      fill: 'origin',
-      data: freq,
-    }]
-    
+    datasets: datasets,    
   };
 
   const config = {
@@ -26,7 +21,8 @@
         scales: {
             y: {
                 beginAtZero: true,
-                grace: "20%"
+                grace: "20%",
+                stacked: true
             }
         }
     }

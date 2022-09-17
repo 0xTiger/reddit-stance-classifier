@@ -99,11 +99,8 @@ def about():
     return render_template("about.html")
 
 
-def binned_counts(increment, value):
+def binned_counts(increment, value, traffics):
     since = datetime.now() - value * increment
-    traffics = Traffic.query.with_entities(Traffic.timestamp).where(Traffic.timestamp > since).all()
-    traffics = sorted(row[0] for row in traffics)
-    
     incremental_traffic = [0]*value
     increment_idx = 0
     count = 0
@@ -114,6 +111,24 @@ def binned_counts(increment, value):
             increment_idx += 1
         count += 1
     incremental_traffic[increment_idx] = count
+    return incremental_traffic
+
+
+def get_traffic_data(increment, value):
+    since = datetime.now() - value * increment
+    traffics = (
+        Traffic.query.with_entities(Traffic.timestamp, Traffic.path)
+        .where(Traffic.timestamp > since)
+        .order_by(Traffic.timestamp)
+        .all()
+    )
+    grouped_traffics = groupby(traffics, key=lambda x: x[1])
+    
+    incremental_traffic = {
+        path: binned_counts(increment, value, (t[0] for t in group)) 
+            for path, group in grouped_traffics
+    }
+    print(incremental_traffic)
     return incremental_traffic
 
 
@@ -128,10 +143,22 @@ def traffic():
         's': timedelta(seconds=1),
     }.get(increment, 'h')
     
-    traffic_frequency = binned_counts(increment, value)
+    available_colors = ['grey', 'red', 'blue', 'green', 'yellow', 'orange']
+    traffic_frequency = get_traffic_data(increment, value)
+    datasets = [
+        {
+            'label': path, 
+            'data': traffics, 
+            'fill': '-1' if i else 'origin', 
+            'borderColor': available_colors[i % len(available_colors)], 
+            'backgroundColor': available_colors[i % len(available_colors)]
+        }
+        for i, (path, traffics) in enumerate(traffic_frequency.items())
+    ]
+    print(datasets)
     return render_template("traffic.html", 
-        traffic_frequency=traffic_frequency,
-        traffic_labels=[n for n in range(-len(traffic_frequency), 0)])
+        traffic_frequency=datasets,
+        traffic_labels=[n for n in range(-value, 0)])
 
 
 @app.route("/subreddits", methods=['POST', 'GET'])
