@@ -128,7 +128,6 @@ def get_traffic_data(increment, value):
         path: binned_counts(increment, value, (t[0] for t in group)) 
             for path, group in grouped_traffics
     }
-    print(incremental_traffic)
     return incremental_traffic
 
 
@@ -155,7 +154,6 @@ def traffic():
         }
         for i, (path, traffics) in enumerate(traffic_frequency.items())
     ]
-    print(datasets)
     return render_template("traffic.html", 
         traffic_frequency=datasets,
         traffic_labels=[n for n in range(-value, 0)])
