@@ -122,7 +122,7 @@ def get_traffic_data(increment, value):
         .order_by(Traffic.timestamp)
         .all()
     )
-    grouped_traffics = groupby(traffics, key=lambda x: x[1])
+    grouped_traffics = groupby(sorted(traffics, key=lambda x: x[1]), key=lambda x: x[1])
     
     incremental_traffic = {
         path: binned_counts(increment, value, (t[0] for t in group)) 
