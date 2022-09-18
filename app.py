@@ -6,6 +6,7 @@ import hashlib
 import httpagentparser
 from requests.exceptions import HTTPError
 from flask import render_template, request, redirect, url_for, session
+from sqlalchemy import func
 
 from prediction import pred_lean
 from utils import (
@@ -114,36 +115,50 @@ def binned_counts(increment, value, traffics):
     return incremental_traffic
 
 
-def get_traffic_data(increment, value):
+def get_traffic_data(increment, value, sessions=False):
     since = datetime.now() - value * increment
-    traffics = (
-        Traffic.query.with_entities(Traffic.timestamp, Traffic.path)
-        .where(Traffic.timestamp > since)
-        .order_by(Traffic.timestamp)
-        .all()
-    )
-    grouped_traffics = groupby(sorted(traffics, key=lambda x: x[1]), key=lambda x: x[1])
-    
-    incremental_traffic = {
-        path: binned_counts(increment, value, (t[0] for t in group)) 
-            for path, group in grouped_traffics
-    }
+    if sessions:
+        traffics = (
+            Traffic.query.with_entities(func.min(Traffic.timestamp))
+            .where(Traffic.timestamp > since)
+            .order_by(func.min(Traffic.timestamp))
+            .group_by(Traffic.session_id)
+            .all()
+        )
+        incremental_traffic = {
+            'sessions': binned_counts(increment, value, (t[0] for t in traffics))
+        }
+    else:
+        traffics = (
+            Traffic.query.with_entities(Traffic.timestamp, Traffic.path)
+            .where(Traffic.timestamp > since)
+            .order_by(Traffic.timestamp)
+            .all()
+        )
+        grouped_traffics = groupby(sorted(traffics, key=lambda x: x[1]), key=lambda x: x[1])
+        incremental_traffic = {
+            path: binned_counts(increment, value, (t[0] for t in group)) 
+                for path, group in grouped_traffics
+        }    
     return incremental_traffic
 
 
 @app.route("/traffic")
 def traffic():
     since = request.args.get('since', '24h')
+    sessions = request.args.get('sessions', 'false').lower() == 'true'
     value, increment = int(since[:-1]), since[-1:]
     increment = {
+        'w': timedelta(weeks=1),
         'd': timedelta(days=1),
         'h': timedelta(hours=1),
         'm': timedelta(minutes=1),
         's': timedelta(seconds=1),
-    }.get(increment, 'h')
+    }.get(increment)
     
+
+    traffic_frequency = get_traffic_data(increment, value, sessions)
     available_colors = ['grey', 'red', 'blue', 'green', 'yellow', 'orange']
-    traffic_frequency = get_traffic_data(increment, value)
     datasets = [
         {
             'label': path, 
