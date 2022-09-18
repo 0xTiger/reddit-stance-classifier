@@ -147,6 +147,7 @@ def get_traffic_data(increment, value, sessions=False):
 def traffic():
     since = request.args.get('since', '24h')
     sessions = request.args.get('sessions', 'false').lower() == 'true'
+    chart_type = request.args.get('chart_type', 'line')
     value, increment = int(since[:-1]), since[-1:]
     increment = {
         'w': timedelta(weeks=1),
@@ -165,11 +166,14 @@ def traffic():
             'data': traffics, 
             'fill': '-1' if i else 'origin', 
             'borderColor': available_colors[i % len(available_colors)], 
-            'backgroundColor': available_colors[i % len(available_colors)]
+            'backgroundColor': available_colors[i % len(available_colors)],
+            'pointHitRadius': 10,
+            'pointRadius': 0,
         }
         for i, (path, traffics) in enumerate(traffic_frequency.items())
     ]
-    return render_template("traffic.html", 
+    return render_template("traffic.html",
+        chart_type=chart_type,
         traffic_frequency=datasets,
         traffic_labels=[n for n in range(-value, 0)])
 
