@@ -1,3 +1,4 @@
+from typing import Union
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
@@ -12,10 +13,9 @@ from prediction import pred_lean
 from utils import (
     stance_name_from_tuple,
     nested_list_to_table_html,
-    get_user_data,
-    get_comment_data,
     stancemap,
-    stancecolormap
+    stancecolormap,
+    ApiHandler,
 )
 from tables import User, Comment, Traffic
 from connections import db, app
@@ -27,15 +27,17 @@ def get_real_ip(r) -> str:
         else r.environ['REMOTE_ADDR'])
 
 
+def create_new_session(time: datetime, remote_addr: Union[str, None]):
+    seed = f'{time}{remote_addr}'
+    session['user'] = hashlib.md5(seed.encode('utf-8')).hexdigest()
+
 def get_analytics_data():
     userInfo = httpagentparser.detect(request.headers.get('User-Agent'), fill_none=True)
     time = datetime.now()
     if 'user' not in session:
-        seed = f'{time}{request.remote_addr}'
-        session['user'] = hashlib.md5(seed.encode('utf-8')).hexdigest()
+        create_new_session(time, request.remote_addr)
 
-
-    reqlog = Traffic(
+    traffic = Traffic(
         ip=get_real_ip(request),
         os=userInfo['platform']['name'],
         browser=userInfo['browser']['name'],
@@ -44,7 +46,7 @@ def get_analytics_data():
         method=request.method,
         timestamp=time,
     )
-    db.session.add(reqlog)
+    db.session.add(traffic)
     db.session.commit()
 
 
@@ -65,8 +67,9 @@ def success():
         user = User.from_name(username)
         if not user:
             try:
-                user_data = get_user_data(username)
-                comments_data = get_comment_data(username)
+                handler = ApiHandler(device_id=session['user'])
+                user_data = handler.get_user_data(username)
+                comments_data = handler.get_comment_data(username)
             except HTTPError as err:
                 if err.response.status_code == 404:
                     return render_template("failure.html", error=f'User \'{username}\' does not exist')
