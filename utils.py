@@ -48,13 +48,16 @@ class ApiHandler:
     https://github.com/reddit-archive/reddit/wiki/API
     https://www.reddit.com/dev/api/
     """
-    device_id = None
     app_user_agent = 'tigeer\'s utils module'
     base_url = 'https://oauth.reddit.com'
 
-    def __init__(self, device_id):
-        self.device_id = device_id
-        self.token_info = self.authorize()
+    def __init__(self, session):
+        self.device_id = session['user']
+        if 'token_info' not in session:
+            session['token_info'] = self.authorize()
+        self.token_info = session['token_info']
+        print(session)
+        print(vars(self))
 
     def authorize(self):
         ACCESS_TOKEN_URL = 'https://www.reddit.com/api/v1/access_token'

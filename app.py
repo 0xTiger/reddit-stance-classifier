@@ -2,6 +2,7 @@ from typing import Union
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
+from http import HTTPStatus
 import hashlib
 
 import httpagentparser
@@ -67,11 +68,11 @@ def success():
         user = User.from_name(username)
         if not user:
             try:
-                handler = ApiHandler(device_id=session['user'])
+                handler = ApiHandler(session)
                 user_data = handler.get_user_data(username)
                 comments_data = handler.get_comment_data(username)
             except HTTPError as err:
-                if err.response.status_code == 404:
+                if err.response.status_code == HTTPStatus.NOT_FOUND:
                     return render_template("failure.html", error=f'User \'{username}\' does not exist')
                 return render_template("failure.html", error='External API error')
 
