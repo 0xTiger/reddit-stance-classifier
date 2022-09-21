@@ -1,7 +1,9 @@
+import os
 from typing import Iterable, List
-import numpy as np
-import requests
 
+import requests
+import numpy as np
+from requests.auth import HTTPBasicAuth
 
 stancecolormap = {
     'libleft': 'green',
@@ -26,7 +28,6 @@ stancemap = {
     'lib': (-1, 0)
 }
 stancemap_inv = {v:k for k,v in stancemap.items()}
-APP_USER_AGENT = 'tigeer\'s utils module'
 
 
 def stance_name_from_tuple(t, axis='both'):
@@ -39,31 +40,76 @@ def stance_name_from_tuple(t, axis='both'):
     return stance
 
 
-def get_user_data(username) -> dict:
-    url = f'https://www.reddit.com/user/{username}/about.json'
-    r = requests.get(url, headers={'user-agent': APP_USER_AGENT})
-    r.raise_for_status()
-    data = r.json()
-    return data['data']
-
+class ApiHandler:
+    """
+    Authorizes via OAuth2 to access the reddit API
     
-def get_comment_data(username, max_iter=None) -> List[dict]:
-    after = '_ignored'
-    i = 0
-    comments = []
-    while (not max_iter or i < max_iter) and after:
-        i += 1
+    For documentation, see:
+    https://github.com/reddit-archive/reddit/wiki/API
+    https://www.reddit.com/dev/api/
+    """
+    app_user_agent = 'tigeer\'s utils module'
+    base_url = 'https://oauth.reddit.com'
 
-        url = f'https://www.reddit.com/user/{username}/comments.json?limit=100&after={after}'
-        r = requests.get(url, headers={'user-agent': APP_USER_AGENT})
-        r.raise_for_status()
-        data = r.json()
+    def __init__(self, session):
+        self.device_id = session['user']
+        if 'token_info' not in session:
+            session['token_info'] = self.authorize()
+        self.token_info = session['token_info']
+        print(session)
+        print(vars(self))
 
-        comments_chunk = data['data']['children']
-        comments += comments_chunk
+    def authorize(self):
+        ACCESS_TOKEN_URL = 'https://www.reddit.com/api/v1/access_token'
+        GRANT_TYPE_URL = 'https://oauth.reddit.com/grants/installed_client'
+        response = requests.post(
+            ACCESS_TOKEN_URL,
+            auth=HTTPBasicAuth(
+                os.environ['CLIENT_ID'], 
+                os.environ['CLIENT_SECRET']
+            ),
+            data=dict(
+                grant_type=GRANT_TYPE_URL,
+                device_id=self.device_id
+            ),
+            headers={'user-agent': self.app_user_agent}
+        )
+        
+        return response.json()
+    
+    def get(self, endpoint_path, **kwargs):
+        access_token = self.token_info['access_token']
+        headers = {
+            'Authorization': f'bearer {access_token}',
+            'user-agent': self.app_user_agent,
+            **kwargs.pop('headers', dict())
+        }
+        response = requests.get(f'{self.base_url}{endpoint_path}', headers=headers, **kwargs)
+        return response
 
-        after = data['data']['after']
-    return [comment['data'] for comment in comments]
+    def get_user_data(self, username) -> dict:
+        response = self.get(f'/user/{username}/about.json')
+        response.raise_for_status()
+        data = response.json()
+        return data['data']
+
+        
+    def get_comment_data(self, username, max_iter=None) -> List[dict]:
+        after = '_ignored'
+        i = 0
+        comments = []
+        while (not max_iter or i < max_iter) and after:
+            i += 1
+
+            response = self.get(f'/user/{username}/comments.json?limit=100&after={after}')
+            response.raise_for_status()
+            data = response.json()
+
+            comments_chunk = data['data']['children']
+            comments += comments_chunk
+
+            after = data['data']['after']
+        return [comment['data'] for comment in comments]
 
 
 def nested_list_to_table_html(nestediter: Iterable[Iterable]):

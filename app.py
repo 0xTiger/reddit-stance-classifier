@@ -1,6 +1,8 @@
+from typing import Union
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import groupby
+from http import HTTPStatus
 import hashlib
 
 import httpagentparser
@@ -12,10 +14,9 @@ from prediction import pred_lean
 from utils import (
     stance_name_from_tuple,
     nested_list_to_table_html,
-    get_user_data,
-    get_comment_data,
     stancemap,
-    stancecolormap
+    stancecolormap,
+    ApiHandler,
 )
 from tables import User, Comment, Traffic
 from connections import db, app
@@ -27,15 +28,17 @@ def get_real_ip(r) -> str:
         else r.environ['REMOTE_ADDR'])
 
 
+def create_new_session(time: datetime, remote_addr: Union[str, None]):
+    seed = f'{time}{remote_addr}'
+    session['user'] = hashlib.md5(seed.encode('utf-8')).hexdigest()
+
 def get_analytics_data():
     userInfo = httpagentparser.detect(request.headers.get('User-Agent'), fill_none=True)
     time = datetime.now()
     if 'user' not in session:
-        seed = f'{time}{request.remote_addr}'
-        session['user'] = hashlib.md5(seed.encode('utf-8')).hexdigest()
+        create_new_session(time, request.remote_addr)
 
-
-    reqlog = Traffic(
+    traffic = Traffic(
         ip=get_real_ip(request),
         os=userInfo['platform']['name'],
         browser=userInfo['browser']['name'],
@@ -44,7 +47,7 @@ def get_analytics_data():
         method=request.method,
         timestamp=time,
     )
-    db.session.add(reqlog)
+    db.session.add(traffic)
     db.session.commit()
 
 
@@ -65,10 +68,11 @@ def success():
         user = User.from_name(username)
         if not user:
             try:
-                user_data = get_user_data(username)
-                comments_data = get_comment_data(username)
+                handler = ApiHandler(session)
+                user_data = handler.get_user_data(username)
+                comments_data = handler.get_comment_data(username)
             except HTTPError as err:
-                if err.response.status_code == 404:
+                if err.response.status_code == HTTPStatus.NOT_FOUND:
                     return render_template("failure.html", error=f'User \'{username}\' does not exist')
                 return render_template("failure.html", error='External API error')
 
@@ -147,6 +151,7 @@ def get_traffic_data(increment, value, sessions=False):
 def traffic():
     since = request.args.get('since', '24h')
     sessions = request.args.get('sessions', 'false').lower() == 'true'
+    chart_type = request.args.get('chart_type', 'line')
     value, increment = int(since[:-1]), since[-1:]
     increment = {
         'w': timedelta(weeks=1),
@@ -165,11 +170,14 @@ def traffic():
             'data': traffics, 
             'fill': '-1' if i else 'origin', 
             'borderColor': available_colors[i % len(available_colors)], 
-            'backgroundColor': available_colors[i % len(available_colors)]
+            'backgroundColor': available_colors[i % len(available_colors)],
+            'pointHitRadius': 10,
+            'pointRadius': 0,
         }
         for i, (path, traffics) in enumerate(traffic_frequency.items())
     ]
-    return render_template("traffic.html", 
+    return render_template("traffic.html",
+        chart_type=chart_type,
         traffic_frequency=datasets,
         traffic_labels=[n for n in range(-value, 0)])
 

@@ -9,13 +9,14 @@
   
   const datasets = {{traffic_frequency | tojson }};
   const labels = {{traffic_labels | tojson }};
+  const chart_type = {{chart_type | tojson }};
   const data = {
     labels: labels,
     datasets: datasets,    
   };
 
   const config = {
-    type: 'line',
+    type: chart_type,
     data: data,
     options: {
         scales: {
@@ -23,8 +24,14 @@
                 beginAtZero: true,
                 grace: "20%",
                 stacked: true
-            }
-        }
+            },
+            x: {
+              stacked: true,
+            },
+        },
+        animation: {
+          duration: 0
+      }
     }
   };
 </script>
