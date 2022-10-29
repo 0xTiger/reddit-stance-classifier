@@ -56,8 +56,6 @@ class ApiHandler:
         if 'token_info' not in session:
             session['token_info'] = self.authorize()
         self.token_info = session['token_info']
-        print(session)
-        print(vars(self))
 
     def authorize(self):
         ACCESS_TOKEN_URL = 'https://www.reddit.com/api/v1/access_token'
