@@ -253,12 +253,22 @@ def create_checkout_session():
 
 @app.route("/donation-success")
 def donation_success():
-    return render_template("about.html")
+    donation_banner = """
+    <div style="background: rgba(52, 235, 82, 80); width: 100%;">
+        <p style="color: darkgreen; text-align: center;">Donation Success, Thank you!</p>
+    </div>
+    """
+    return render_template("about.html", donation_banner=donation_banner)
 
 
 @app.route("/donation-cancelled")
 def donation_cancelled():
-    return render_template("about.html")
+    donation_banner = """
+    <div style="background: rgba(235, 64, 52, 80); width: 100%;">
+        <p style="color: darkred; text-align: center;">Donation Cancelled</p>
+    </div>
+    """
+    return render_template("about.html", donation_banner=donation_banner)
 
 
 if __name__ == '__main__':
