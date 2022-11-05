@@ -8,6 +8,8 @@ class Config(object):
     SECRET_KEY = 'this-really-needs-to-be-changed'
     SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    DOMAIN_URL = 'https://reddit-lean.com/'
+
 
 class ProductionConfig(Config):
     DEBUG = False
@@ -21,7 +23,9 @@ class StagingConfig(Config):
 class DevelopmentConfig(Config):
     DEVELOPMENT = True
     DEBUG = True
+    DOMAIN_URL = 'http://127.0.0.1:5000/'
 
 
 class TestingConfig(Config):
     TESTING = True
+    DOMAIN_URL = 'http://127.0.0.1:5000/'

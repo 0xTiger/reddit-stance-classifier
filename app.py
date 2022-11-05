@@ -1,3 +1,4 @@
+import os
 from typing import Union
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -7,8 +8,9 @@ import hashlib
 
 import httpagentparser
 from requests.exceptions import HTTPError
-from flask import render_template, request, redirect, url_for, session
+from flask import render_template, request, redirect, url_for, session, jsonify
 from sqlalchemy import func
+import stripe
 
 from prediction import pred_lean
 from utils import (
@@ -19,7 +21,7 @@ from utils import (
     ApiHandler,
 )
 from tables import User, Comment, Traffic
-from connections import db, app
+from connections import db, app, config
 
 
 def get_real_ip(r) -> str:
@@ -217,6 +219,46 @@ def subreddits():
     tooltip = f'<div class="tooltip"><i class="fas fa-info-circle"></i><span class="tooltiptext">{stance_legend}</span></div>'
     header = f'<thead><tr><th>Subreddit</th><th>{tooltip} Demographics </th></tr></thead>'
     return render_template("subreddits.html", table=header + nested_list_to_table_html(results))
+
+
+@app.route("/stripe-key")
+def get_publishable_key():
+    stripe_config = {"publicKey": os.getenv('STRIPE_PUBLISHABLE_KEY')}
+    return jsonify(stripe_config)
+
+
+@app.route("/create-checkout-session")
+def create_checkout_session():
+    stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+    # For full details see https://stripe.com/docs/api/checkout/sessions/create
+    # ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            success_url=config.DOMAIN_URL + 'donation-success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=config.DOMAIN_URL + 'donation-cancelled',
+            payment_method_types=['card'],
+            mode='payment',
+            line_items=[
+                {
+                    'price': 'price_1M0maPErrLOvq9YI5K3DmOKt',
+                    'quantity': 1,
+                }
+            ]
+        )
+        return jsonify({'sessionId': checkout_session['id']})
+    except Exception as e:
+        print(e)
+        return jsonify(error=str(e)), 403
+
+
+@app.route("/donation-success")
+def donation_success():
+    return render_template("about.html")
+
+
+@app.route("/donation-cancelled")
+def donation_cancelled():
+    return render_template("about.html")
 
 
 if __name__ == '__main__':

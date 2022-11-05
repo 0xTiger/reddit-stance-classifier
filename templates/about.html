@@ -1,5 +1,7 @@
 {% extends "index.html" %}
 {% block content %}
+<script src="https://js.stripe.com/v3/"></script>
+<script src="{{ url_for('static', filename='donate.js') }}"></script>
 <ul>
   <li>
     <h2>How it works</h2>
@@ -16,6 +18,16 @@
   <li>
     <h2>Contact Me</h2>
     If you have any questions you can contact me at <a href="mailto:me@tom.cv" class="link link--dark"><i class="fa fa-envelope"></i> me@tom.cv</a> :)
+  </li>
+  <li>
+    <h2>Donate</h2>
+    If you want to support more work like this, donating helps me a lot! 
+    <section class="section">
+      <div class="container">
+        <button class="button is-primary" id="submitBtn"><i class="fa fa-coins"></i>DONATE</button>
+      </div>
+    </section>
+
   </li>
 </ul>
 {% endblock %}
