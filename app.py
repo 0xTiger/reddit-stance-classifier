@@ -240,7 +240,7 @@ def create_checkout_session():
             mode='payment',
             line_items=[
                 {
-                    'price': 'price_1M0maPErrLOvq9YI5K3DmOKt',
+                    'price': os.getenv('DONATION_PRICE_ID'),
                     'quantity': 1,
                 }
             ]
