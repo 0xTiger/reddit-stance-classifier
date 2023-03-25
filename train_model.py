@@ -1,3 +1,4 @@
+from collections import defaultdict
 import argparse
 from timeit import default_timer as timer
 
@@ -11,7 +12,7 @@ from sklearn.feature_selection import SelectKBest
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict
-from sklearn.metrics import confusion_matrix, precision_score, recall_score, mean_absolute_error
+from sklearn.metrics import confusion_matrix, precision_score, recall_score, mean_absolute_error, f1_score
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.multioutput import MultiOutputRegressor
 
@@ -78,7 +79,7 @@ if __name__ == '__main__':
         print(f'MAE: {mean_absolute_error(y_train, y_pred)}')
         stances = sorted(stancemap.keys())
 
-        actual_stances, pred_stances, conf_matrices, precision_scores, recall_scores = dict(), dict(), dict(), dict(), dict()
+        scores = defaultdict(dict)
         for axis in ['both', 'h_binary', 'v_binary']:
             if axis == 'h_binary':
                 relevant_idx = y_train[:, 1] != 0
@@ -87,19 +88,22 @@ if __name__ == '__main__':
             else:
                 relevant_idx = np.ones_like(y_train[:, 0], dtype=bool)
 
-            actual_stances[axis] = np.array(list(map(lambda t: stance_name_from_tuple(t, axis=axis), y_train[relevant_idx])))
-            pred_stances[axis] = np.array(list(map(lambda t: stance_name_from_tuple(t, axis=axis), y_pred[relevant_idx])))
-            conf_matrices[axis] = confusion_matrix(actual_stances[axis], pred_stances[axis])    
-            precision_scores[axis] = precision_score(actual_stances[axis], pred_stances[axis], average='weighted')
-            recall_scores[axis] = recall_score(actual_stances[axis], pred_stances[axis], average='weighted')
+            scores[axis]['actual_stances'] = np.array([stance_name_from_tuple(t, axis=axis) for t in y_train[relevant_idx]])
+            scores[axis]['pred_stances'] = np.array([stance_name_from_tuple(t, axis=axis) for t in y_pred[relevant_idx]])
+            scores[axis]['conf_matrices'] = confusion_matrix(scores[axis]['actual_stances'], scores[axis]['pred_stances'])    
+            scores[axis]['precision_scores'] = precision_score(scores[axis]['actual_stances'], scores[axis]['pred_stances'], average='weighted')
+            scores[axis]['recall_scores'] = recall_score(scores[axis]['actual_stances'], scores[axis]['pred_stances'], average='weighted')
+            scores[axis]['f1_scores'] = f1_score(scores[axis]['actual_stances'], scores[axis]['pred_stances'], average='weighted')
 
-            print(np.unique(actual_stances[axis]))
-            print(conf_matrices[axis])
-            print(f'Precision: {precision_scores[axis]}')
-            print(f'Recall: {recall_scores[axis]}')
+            print(np.unique(scores[axis]['actual_stances']))  
+            print(scores[axis]['conf_matrices'])
+            print(f'Precision: {scores[axis]["precision_scores"]:.4f}')
+            print(f'Recall: {scores[axis]["recall_scores"]:.4f}')
+            print(f'F1: {scores[axis]["f1_scores"]:.4f}')
+            print('='*80)
         
         fig, ax = plt.subplots()
-        cax = ax.matshow(conf_matrices['both'], cmap=plt.cm.gray)
+        cax = ax.matshow(scores['both']['conf_matrices'], cmap=plt.cm.gray)
         fig.colorbar(cax)
 
         ax.set_xticks(list(range(len(stances))))
@@ -117,7 +121,7 @@ if __name__ == '__main__':
         ax2.scatter(
             y_pred[:, 1],
             y_pred[:, 0],
-            color=[stancecolormap.get(stance) for stance in actual_stances['both']],
+            color=[stancecolormap.get(stance) for stance in scores['both']['actual_stances']],
             s=5,
             alpha=0.5
         )
