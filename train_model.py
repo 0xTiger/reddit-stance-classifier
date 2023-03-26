@@ -1,141 +1,87 @@
 from collections import defaultdict
-import argparse
-from timeit import default_timer as timer
 
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.lines as mlines
-import joblib
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_selection import SelectKBest
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import StratifiedShuffleSplit, cross_val_predict
-from sklearn.metrics import confusion_matrix, precision_score, recall_score, mean_absolute_error, f1_score
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.multioutput import MultiOutputRegressor
+from sklearn.metrics import confusion_matrix, f1_score
+from sentence_transformers import SentenceTransformer
+import torch
+import torch.nn.functional as F
+from tqdm import tqdm
 
-from custom_transformers import DictFilterer, ToSparseDF, exclude_u_sub, multi_f_classif
-from utils import stancecolormap, stancemap, stance_name_from_tuple
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument('-p', '--persist', action='store_true', help='Specify whether to make the model persistent in models/*')
-parser.add_argument('--noval', action='store_true', help='specify whether to evaluate the model\'s performance')
-args = parser.parse_args()
-
-forest_clf = RandomForestRegressor(min_samples_leaf=5, random_state=42)
-multi_clf = MultiOutputRegressor(forest_clf)
-full_pipeline = Pipeline([
-    ('filterer', DictFilterer(exclude_u_sub)),
-    ('vectorizer', DictVectorizer(sparse=True)),
-    ('selectKBest', SelectKBest(multi_f_classif, k=1000)),
-    ('scaler', StandardScaler(with_mean=False)),
-    ('framer', ToSparseDF()),
-    ('clf', multi_clf)
-])
 
 if __name__ == '__main__':
     from tables import Comment, Stance, db
     from collections import defaultdict
 
-    comment_groups = (
+    comments = (
         Comment.query
-        .with_entities(Comment.author, Comment.subreddit, db.func.count(Comment.subreddit))
-        .group_by(Comment.author, Comment.subreddit)
+        .with_entities(Comment.author, Comment.subreddit, Comment.body)
+        .limit(1_000_000)
         .all()
     )
     stances = Stance.query.all()
 
+    sentence_trans = SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2')
+    sentence_embeddings = sentence_trans.encode([comment[-1] for comment in comments], show_progress_bar=True, batch_size=1024)
+
     stances_dict = dict()
-    subreddit_counts = defaultdict(dict)
-    for author, subreddit, count in comment_groups:
-        subreddit_counts[author][subreddit] = count
+    author_embeddings = defaultdict(list)
+    for (author, subreddit, comment), embedding in zip(comments, sentence_embeddings):
+        author_embeddings[author].append(embedding)
     for stance in stances:
         stances_dict[stance.name] = (stance.v_pos, stance.h_pos)
 
     features, labels = [], []
-    for author, subs in subreddit_counts.items():
+    for author, embeddings in author_embeddings.items():
         label = stances_dict.get(author)
         if label:
-            features.append(subs)
+            features.append(sum(embeddings) / len(embeddings))
             labels.append(label)
 
-    labels = np.array(labels)
-    features = pd.Series(features)
 
-    splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2, random_state=42)
-    for train_index, test_index in splitter.split(features, labels):
-        X_train, y_train = features[train_index], labels[train_index]
-        X_test, y_test = features[test_index], labels[test_index]
+    X = np.array(features)
+    y = np.array(labels)
+    not_centerist = y[:, 1] != 0
+    X = X[not_centerist]
+    y = (y[not_centerist, 1] > 0)[:, np.newaxis]
+    X = torch.tensor(X, dtype=torch.float)
+    y = torch.tensor(y, dtype=torch.float)
 
-    if not args.noval:
-        start = timer()
-        y_pred = cross_val_predict(full_pipeline, X_train, y_train, cv=5, n_jobs=-1)
-        y_pred = y_pred.clip(-1, 1)
-        end = timer()
-        print(f'Trained in {end - start}')
-        print(f'MAE: {mean_absolute_error(y_train, y_pred)}')
-        stances = sorted(stancemap.keys())
+    num_instances = X.shape[0]
+    train_mask = torch.tensor(np.arange(num_instances) <= num_instances * 90 // 100, dtype=torch.bool)
+    test_mask = torch.tensor(np.arange(num_instances) > num_instances * 90 // 100, dtype=torch.bool)
+    class LinearMLP(torch.nn.Module):
+        def __init__(self):
+            super(LinearMLP, self).__init__()
+            self.linear1 = torch.nn.Linear(384, 64)
+            self.linear3 = torch.nn.Linear(64, 1)
+            self.norm = torch.nn.InstanceNorm1d(384)
 
-        scores = defaultdict(dict)
-        for axis in ['both', 'h_binary', 'v_binary']:
-            if axis == 'h_binary':
-                relevant_idx = y_train[:, 1] != 0
-            elif axis == 'v_binary':
-                relevant_idx = y_train[:, 0] != 0
-            else:
-                relevant_idx = np.ones_like(y_train[:, 0], dtype=bool)
+        def forward(self, x):
+            x = self.norm(x)
+            x = self.linear1(x)
+            x = self.linear3(x)
+            return F.sigmoid(x)
 
-            scores[axis]['actual_stances'] = np.array([stance_name_from_tuple(t, axis=axis) for t in y_train[relevant_idx]])
-            scores[axis]['pred_stances'] = np.array([stance_name_from_tuple(t, axis=axis) for t in y_pred[relevant_idx]])
-            scores[axis]['conf_matrices'] = confusion_matrix(scores[axis]['actual_stances'], scores[axis]['pred_stances'])    
-            scores[axis]['precision_scores'] = precision_score(scores[axis]['actual_stances'], scores[axis]['pred_stances'], average='weighted')
-            scores[axis]['recall_scores'] = recall_score(scores[axis]['actual_stances'], scores[axis]['pred_stances'], average='weighted')
-            scores[axis]['f1_scores'] = f1_score(scores[axis]['actual_stances'], scores[axis]['pred_stances'], average='weighted')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = LinearMLP().to(device)
+    X = X.to(device)
+    y = y.to(device)
+    optimizer = torch.optim.NAdam(model.parameters(), lr=0.00001, weight_decay=5e-4)
 
-            print(np.unique(scores[axis]['actual_stances']))  
-            print(scores[axis]['conf_matrices'])
-            print(f'Precision: {scores[axis]["precision_scores"]:.4f}')
-            print(f'Recall: {scores[axis]["recall_scores"]:.4f}')
-            print(f'F1: {scores[axis]["f1_scores"]:.4f}')
-            print('='*80)
-        
-        fig, ax = plt.subplots()
-        cax = ax.matshow(scores['both']['conf_matrices'], cmap=plt.cm.gray)
-        fig.colorbar(cax)
+    model.train()
+    pbar = tqdm(range(5000))
+    for epoch in pbar:
+        optimizer.zero_grad()
+        out = model(X)
+        loss = F.binary_cross_entropy(out[train_mask], y[train_mask])
+        loss.backward()
+        val_loss = F.binary_cross_entropy(out[test_mask], y[test_mask])
+        pbar.set_description(f'val_loss: {val_loss:.3f}')
+        optimizer.step()
 
-        ax.set_xticks(list(range(len(stances))))
-        ax.set_yticks(list(range(len(stances))))
-        ax.set_xticklabels(stances, rotation=45)
-        ax.set_yticklabels(stances)
+    model.eval()
+    pred = model(X)
+    y_pred = pred[test_mask].cpu().detach().numpy()
+    y_test = y[test_mask].cpu().detach().numpy()
 
-
-        xleft, xright = ax.get_xlim()
-        ybottom, ytop = ax.get_ylim()
-        ax.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
-        
-
-        fig2, ax2 = plt.subplots()
-        ax2.scatter(
-            y_pred[:, 1],
-            y_pred[:, 0],
-            color=[stancecolormap.get(stance) for stance in scores['both']['actual_stances']],
-            s=5,
-            alpha=0.5
-        )
-        ax2.axhline(0, color='k', linestyle='--')
-        ax2.axvline(0, color='k', linestyle='--')
-        ax2.set_xlabel('Left/Right')
-        ax2.set_ylabel('Lib/Auth')
-        ax2.set_aspect(abs((xright-xleft)/(ybottom-ytop)))
-
-        ax2.legend(handles=[mlines.Line2D([], [], color=color, marker='.', linestyle='None',
-                            markersize=4, label=stance) for stance,color in stancecolormap.items()],
-                    bbox_to_anchor=(1.04,1), loc="upper left")
-        plt.show()
-
-    if args.persist:
-        full_pipeline.fit(X_train, y_train)
-        joblib.dump(full_pipeline, 'models/ensemble.pkl')
+    print(f1_score(y_test, y_pred > 0.5))
