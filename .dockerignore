@@ -1,0 +1,11 @@
+__pycache__
+assets_dev
+venv
+vars
+.vscode
+nonexist.csv
+labels.csv
+map_imgs
+db_backups
+user_profiles.zip
+eval_plots
