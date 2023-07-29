@@ -63,8 +63,8 @@ class ApiHandler:
         response = requests.post(
             ACCESS_TOKEN_URL,
             auth=HTTPBasicAuth(
-                os.environ['CLIENT_ID'], 
-                os.environ['CLIENT_SECRET']
+                os.environ['REDDIT_CLIENT_ID'], 
+                os.environ['REDDIT_CLIENT_SECRET']
             ),
             data=dict(
                 grant_type=GRANT_TYPE_URL,

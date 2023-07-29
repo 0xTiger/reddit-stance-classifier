@@ -9,3 +9,4 @@ map_imgs
 db_backups
 user_profiles.zip
 eval_plots
+.env

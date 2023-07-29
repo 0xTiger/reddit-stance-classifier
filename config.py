@@ -6,7 +6,11 @@ class Config(object):
     TESTING = False
     CSRF_ENABLED = True
     SECRET_KEY = 'this-really-needs-to-be-changed'
-    SQLALCHEMY_DATABASE_URI = os.environ['DATABASE_URL']
+    POSTGRES_USER = os.environ['POSTGRES_USER']
+    POSTGRES_PASSWORD = os.environ['POSTGRES_PASSWORD']
+    POSTGRES_HOST = os.environ['POSTGRES_HOST']
+    POSTGRES_DB = os.environ['POSTGRES_DB']
+    SQLALCHEMY_DATABASE_URI = f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}/{POSTGRES_DB}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DOMAIN_URL = 'https://reddit-lean.com/'
 
