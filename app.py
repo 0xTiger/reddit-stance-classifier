@@ -21,7 +21,7 @@ from utils import (
     ApiHandler,
 )
 from tables import User, Comment, Traffic
-from connections import db, app, config
+from connections import db, app
 
 
 def get_real_ip(r) -> str:
@@ -234,8 +234,8 @@ def create_checkout_session():
     # ?session_id={CHECKOUT_SESSION_ID} means the redirect will have the session ID set as a query param
     try:
         checkout_session = stripe.checkout.Session.create(
-            success_url=config.DOMAIN_URL + 'donation-success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=config.DOMAIN_URL + 'donation-cancelled',
+            success_url=app.config['DOMAIN_URL'] + 'donation-success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=app.config['DOMAIN_URL'] + 'donation-cancelled',
             payment_method_types=['card'],
             mode='payment',
             line_items=[

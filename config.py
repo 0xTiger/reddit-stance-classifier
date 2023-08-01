@@ -2,7 +2,8 @@ import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config(object):
-    DEBUG = False
+    DEBUG = not os.environ['ENV'] == 'prod'
+    DEVELOPMENT = not os.environ['ENV'] == 'prod'
     TESTING = False
     CSRF_ENABLED = True
     SECRET_KEY = 'this-really-needs-to-be-changed'
@@ -12,24 +13,4 @@ class Config(object):
     WEBSITE_DB = os.environ['WEBSITE_DB']
     SQLALCHEMY_DATABASE_URI = f'postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}/{WEBSITE_DB}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    DOMAIN_URL = 'https://reddit-lean.com/'
-
-
-class ProductionConfig(Config):
-    DEBUG = False
-
-
-class StagingConfig(Config):
-    DEVELOPMENT = True
-    DEBUG = True
-
-
-class DevelopmentConfig(Config):
-    DEVELOPMENT = True
-    DEBUG = True
-    DOMAIN_URL = 'http://127.0.0.1:5000/'
-
-
-class TestingConfig(Config):
-    TESTING = True
-    DOMAIN_URL = 'http://127.0.0.1:5000/'
+    DOMAIN_URL = 'https://reddit-lean.com/' if os.environ['ENV'] == 'prod' else 'http://127.0.0.1:5000/'

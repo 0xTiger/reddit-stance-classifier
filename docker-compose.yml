@@ -7,10 +7,10 @@ services:
       dockerfile: ./Dockerfile
     working_dir: /app
     env_file: .env
+    environment:
+      - ENV=dev
     volumes:
       - "./:/app"
-    expose:
-      - 5000
     ports:
       - "5000:5000"
     depends_on:
