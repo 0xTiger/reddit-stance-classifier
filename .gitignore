@@ -10,3 +10,4 @@ db_backups
 user_profiles.zip
 eval_plots
 .env
+*.pem
