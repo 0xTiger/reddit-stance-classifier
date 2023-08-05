@@ -8,8 +8,8 @@ services:
     command: gunicorn -b 0.0.0.0:8000 app:app
     environment:
       - ENV=prod
-    expose:
-      - 8000
+    ports:
+      - "8000:8000"
   database:
     extends:
       file: docker-compose.yml
