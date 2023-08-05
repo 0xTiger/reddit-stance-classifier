@@ -26,6 +26,7 @@
   
   const h = {{user.prediction.h_pos | tojson }};
   const v = {{user.prediction.v_pos | tojson }};
+  const user_name = {{user.name | tojson }};
 
   var c = 'rgb(132, 99, 255)';
   if (h < 0) {
@@ -43,7 +44,7 @@
   }
   const data = {
     datasets: [{
-      label: 'My First dataset',
+      label: user_name,
       backgroundColor: c,
       borderColor: c,
       data: [{x: h, 
