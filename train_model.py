@@ -38,6 +38,8 @@ full_pipeline = Pipeline([
 
 if __name__ == '__main__':
     from tables import Comment, Stance, db
+    from connections import app
+    app.app_context().push()
     from collections import defaultdict
 
     comment_groups = (

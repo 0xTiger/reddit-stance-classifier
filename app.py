@@ -9,7 +9,7 @@ import hashlib
 import httpagentparser
 from requests.exceptions import HTTPError
 from flask import render_template, request, redirect, url_for, session, jsonify
-from sqlalchemy import func
+from sqlalchemy import func, text
 import stripe
 
 from prediction import pred_lean
@@ -197,13 +197,13 @@ def subreddits():
     WHERE subreddit_stance.subreddit = any(
         SELECT subreddit_stance.subreddit
         FROM subreddit_stance
-        WHERE subreddit_stance.subreddit ILIKE %s
+        WHERE subreddit_stance.subreddit ILIKE :pattern
         GROUP BY subreddit_stance.subreddit
         ORDER BY SUM(count) DESC
         LIMIT 100
     )
     """
-    results = db.engine.execute(query, f'%%{subreddit}%%')
+    results = db.session.execute(text(query), {'pattern': f'%{subreddit}%'})
     results = {name: defaultdict(int, {stance_name_from_tuple((y[2], y[1])): y[3] for y in group})
      for name, group in groupby(results, key=lambda x: x[0])}
     # results = [[sub] + [f'<p style="color: {stancecolormap[stance]}">{result[stance] / sum(result.values()):.0%}</p>' for stance in stancemap.keys()] for sub, result in results.items()]

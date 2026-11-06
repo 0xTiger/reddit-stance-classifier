@@ -1,4 +1,6 @@
 from utils import stancemap, stance_name_from_tuple
+from sqlalchemy import text
+
 from connections import db
 
 
@@ -156,11 +158,13 @@ def create_subreddit_view():
         GROUP BY comment.subreddit, stance.h_pos, stance.v_pos
         WITH DATA
         """
-    db.engine.execute(query)
+    db.session.execute(text(query))
+    db.session.commit()
 
 
 def refresh_subreddit_view():
     query = """
         REFRESH MATERIALIZED VIEW subreddit_stance
         """
-    db.engine.execute(query)
+    db.session.execute(text(query))
+    db.session.commit()

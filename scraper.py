@@ -2,7 +2,10 @@ import csv
 from requests.exceptions import HTTPError
 from utils import get_comment_data, get_user_data
 from tables import User, Comment, Stance
-from connections import db
+from sqlalchemy import text
+from connections import db, app
+
+app.app_context().push()
 
 data_file = '../polcompass/data/polcompass.csv'
 save_file = 'user_profiles.zip'
@@ -42,7 +45,7 @@ for i, (username, stance_name) in enumerate(usernames.items()):
 
         print(f'{username:<24} | {len(comments_data)} comments gathered')
         if i % 20 == 0: 
-            tablesize = db.engine.execute("SELECT pg_size_pretty(pg_total_relation_size('public.comment'))").first()[0]
+            tablesize = db.session.execute(text("SELECT pg_size_pretty(pg_total_relation_size('public.comment'))")).scalar()
             print(f'Table size in db: {tablesize}')
 
             with open(nonexist_file, 'a') as f:
