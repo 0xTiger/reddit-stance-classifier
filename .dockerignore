@@ -9,3 +9,9 @@ map_imgs
 db_backups
 user_profiles.zip
 eval_plots
+.git
+.gitignore
+.env
+user_profiles.json
+preds.pkl
+*.pyc
